@@ -1,2 +1,83 @@
-.idea
-config.yaml
+# Go编译产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# 编译文件
+bin/
+build/
+dist/
+
+# 示例可执行文件
+examples/**/*.exe
+
+# 依赖目录
+vendor/
+
+# IDE配置
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件和目录
+tmp/
+temp/
+.tmp/
+
+# 本地配置文件
+*.local
+*.env
+.env
+
+# 包管理文件
+go.work
+
+# 覆盖率报告
+coverage.txt
+coverage.out
+profile.out
+*.coverprofile
+
+# 调试文件
+__debug_bin
+debug
+
+# 自动生成的文件
+*.pb.go
+*.pb.gw.go
+*_string.go
+
+# macOS系统文件
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows系统文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux系统文件
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
