@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/scagogogo/cve"
 )
 
 // NVDFeedOptions NVD Feed下载选项
@@ -368,7 +370,7 @@ func (data *NVDCPEData) FindCPEsForCVE(cveID string) []*CPE {
 	}
 
 	// 标准化CVE ID
-	cveID = standardizeCVEID(cveID)
+	cveID = cve.Format(cveID)
 
 	// 获取CPE字符串列表
 	cpeStrs, ok := data.CPEMatchData.CVEToCPEs[cveID]

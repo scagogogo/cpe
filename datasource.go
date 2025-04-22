@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/scagogogo/cve"
 )
 
 // DataSourceType 表示数据源类型
@@ -260,7 +262,7 @@ func (ds *DataSource) GetVulnerabilities(params map[string]string) ([]*CVERefere
 // GetVulnerabilityById 根据CVE ID获取漏洞信息
 func (ds *DataSource) GetVulnerabilityById(cveID string) (*CVEReference, error) {
 	// 标准化CVE ID
-	cveID = standardizeCVEID(cveID)
+	cveID = cve.Format(cveID)
 
 	var endpoint string
 
@@ -667,7 +669,8 @@ func NewMultiSourceSearch(sources []*DataSource) *MultiSourceVulnerabilitySearch
 
 // SearchByCVE 根据CVE ID在多个数据源中搜索
 func (ms *MultiSourceVulnerabilitySearch) SearchByCVE(cveID string) ([]*CVEReference, error) {
-	cveID = standardizeCVEID(cveID)
+	// 标准化CVE ID
+	cveID = cve.Format(cveID)
 
 	// 用于保存搜索结果
 	type searchResult struct {

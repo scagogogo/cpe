@@ -3,6 +3,8 @@ package cpe
 import (
 	"strings"
 	"time"
+
+	"github.com/scagogogo/cve"
 )
 
 // CVEReference 表示一个CVE安全漏洞
@@ -49,8 +51,11 @@ type CVEReference struct {
 //	cve.Description = "Log4j远程代码执行漏洞"
 //	cve.SetSeverity(10.0) // 设置为Critical级别
 func NewCVEReference(cveID string) *CVEReference {
+	// 使用cve库格式化输入的CVE ID
+	formattedCVEID := cve.Format(cveID)
+
 	return &CVEReference{
-		CVEID:            cveID,
+		CVEID:            formattedCVEID,
 		References:       []string{},
 		AffectedCPEs:     []string{},
 		Metadata:         make(map[string]interface{}),
@@ -274,7 +279,7 @@ func (cve *CVEReference) RemoveMetadata(key string) bool {
 //   - []*CPE: 返回与指定CVE关联的所有CPE对象的切片
 //
 // 行为:
-//   - 会自动标准化CVE ID的格式(例如: "cve-2021-44228" -> "CVE-2021-44228")
+//   - 会使用github.com/scagogogo/cve库标准化CVE ID的格式
 //   - 解析每个匹配CVE的所有受影响CPE，并将CVE信息关联到CPE对象
 //   - 支持解析CPE 2.2和CPE 2.3格式
 //
@@ -301,7 +306,7 @@ func QueryByCVE(cves []*CVEReference, cveID string) []*CPE {
 	var result []*CPE
 
 	// 标准化CVE ID格式
-	cveID = standardizeCVEID(cveID)
+	cveID = cve.Format(cveID)
 
 	// 查找匹配的CVE
 	for _, cve := range cves {
@@ -335,37 +340,6 @@ func QueryByCVE(cves []*CVEReference, cveID string) []*CPE {
 	return result
 }
 
-// standardizeCVEID 标准化CVE ID格式
-// 输入:
-//   - cveID: string 类型，需要标准化的CVE ID，可以是任何格式的CVE标识符
-//
-// 输出:
-//   - string: 返回标准化后的CVE ID，格式为"CVE-YYYY-NNNNN..."
-//
-// 行为:
-//   - 将字符串转换为大写
-//   - 确保使用标准的"CVE-"前缀格式
-//   - 修正不符合标准格式的表示形式
-//
-// 示例:
-//
-//	standardizeCVEID("cve-2021-44228")  -> "CVE-2021-44228"
-//	standardizeCVEID("CVE2021-44228")   -> "CVE-2021-44228"
-//	standardizeCVEID("CVE202144228")    -> "CVE-202144228" (注意：需要外部进一步处理)
-func standardizeCVEID(cveID string) string {
-	// 转为大写
-	cveID = strings.ToUpper(cveID)
-
-	// 确保使用正确的格式 CVE-YYYY-NNNNN
-	if !strings.HasPrefix(cveID, "CVE-") {
-		if strings.HasPrefix(cveID, "CVE") {
-			cveID = "CVE-" + cveID[3:]
-		}
-	}
-
-	return cveID
-}
-
 // GetCVEInfo 获取CVE详细信息
 // 输入:
 //   - cves: []*CVEReference 类型，CVE引用对象的切片
@@ -375,7 +349,7 @@ func standardizeCVEID(cveID string) string {
 //   - *CVEReference: 返回匹配的CVE引用对象，如果未找到则返回nil
 //
 // 行为:
-//   - 会自动标准化CVE ID的格式(例如: "cve-2021-44228" -> "CVE-2021-44228")
+//   - 会使用github.com/scagogogo/cve库标准化CVE ID的格式
 //   - 从CVE列表中查找完全匹配的CVE ID
 //
 // 示例:
@@ -389,15 +363,140 @@ func standardizeCVEID(cveID string) string {
 //	  fmt.Println("未找到指定的CVE")
 //	}
 func GetCVEInfo(cves []*CVEReference, cveID string) *CVEReference {
-	cveID = standardizeCVEID(cveID)
+	cveID = cve.Format(cveID)
 
-	for _, cve := range cves {
-		if cve.CVEID == cveID {
-			return cve
+	for _, c := range cves {
+		if c.CVEID == cveID {
+			return c
 		}
 	}
 
 	return nil
+}
+
+// ExtractCVEsFromText 从文本中提取所有CVE ID
+// 输入:
+//   - text: string 类型，可能包含CVE ID的文本内容
+//
+// 输出:
+//   - []string: 返回从文本中提取的所有唯一的、格式化的CVE ID
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的ExtractCve函数提取文本中的所有CVE ID
+//   - 自动标准化提取的CVE ID格式
+//   - 提取结果已去重
+//
+// 示例:
+//
+//	text := "系统受到CVE-2021-44228和cve-2022-12345漏洞的影响"
+//	cveIDs := ExtractCVEsFromText(text)
+//	// 返回 ["CVE-2021-44228", "CVE-2022-12345"]
+func ExtractCVEsFromText(text string) []string {
+	return cve.ExtractCve(text)
+}
+
+// GroupCVEsByYear 按年份对CVE ID进行分组
+// 输入:
+//   - cveIDs: []string 类型，CVE ID列表
+//
+// 输出:
+//   - map[string][]string: 返回以年份为键、对应年份CVE列表为值的映射
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的GroupByYear函数按年份对CVE ID进行分组
+//   - 支持标准化的CVE ID格式
+//
+// 示例:
+//
+//	cveIDs := []string{"CVE-2021-44228", "CVE-2022-12345", "CVE-2021-45046"}
+//	groupedCVEs := GroupCVEsByYear(cveIDs)
+//	// 返回:
+//	// {
+//	//   "2021": ["CVE-2021-44228", "CVE-2021-45046"],
+//	//   "2022": ["CVE-2022-12345"]
+//	// }
+func GroupCVEsByYear(cveIDs []string) map[string][]string {
+	return cve.GroupByYear(cveIDs)
+}
+
+// SortCVEs 对CVE ID列表进行排序
+// 输入:
+//   - cveIDs: []string 类型，CVE ID列表
+//
+// 输出:
+//   - []string: 返回排序后的CVE ID列表
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的SortCves函数对CVE ID列表进行排序
+//   - 排序规则：先按年份排序，然后按序列号排序
+//
+// 示例:
+//
+//	cveIDs := []string{"CVE-2022-12345", "CVE-2021-44228", "CVE-2021-0001"}
+//	sortedCVEs := SortCVEs(cveIDs)
+//	// 返回 ["CVE-2021-0001", "CVE-2021-44228", "CVE-2022-12345"]
+func SortCVEs(cveIDs []string) []string {
+	return cve.SortCves(cveIDs)
+}
+
+// RemoveDuplicateCVEs 去除CVE ID列表中的重复项
+// 输入:
+//   - cveIDs: []string 类型，可能包含重复项的CVE ID列表
+//
+// 输出:
+//   - []string: 返回去重后的CVE ID列表
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的RemoveDuplicateCves函数去除重复项
+//   - 标准化所有CVE ID格式
+//
+// 示例:
+//
+//	cveIDs := []string{"CVE-2021-44228", "cve-2021-44228", "CVE-2022-12345"}
+//	uniqueCVEs := RemoveDuplicateCVEs(cveIDs)
+//	// 返回 ["CVE-2021-44228", "CVE-2022-12345"]
+func RemoveDuplicateCVEs(cveIDs []string) []string {
+	return cve.RemoveDuplicateCves(cveIDs)
+}
+
+// GetRecentCVEs 获取最近N年的CVE ID
+// 输入:
+//   - cveIDs: []string 类型，CVE ID列表
+//   - years: int 类型，年份范围，如2表示最近2年
+//
+// 输出:
+//   - []string: 返回最近N年的CVE ID列表
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的GetRecentCves函数筛选最近N年的CVE
+//
+// 示例:
+//
+//	cveIDs := []string{"CVE-2021-44228", "CVE-2018-12345", "CVE-2022-56789"}
+//	recentCVEs := GetRecentCVEs(cveIDs, 2) // 假设当前是2023年
+//	// 返回 ["CVE-2021-44228", "CVE-2022-56789"]
+func GetRecentCVEs(cveIDs []string, years int) []string {
+	return cve.GetRecentCves(cveIDs, years)
+}
+
+// ValidateCVE 验证CVE ID是否有效
+// 输入:
+//   - cveID: string 类型，待验证的CVE ID
+//
+// 输出:
+//   - bool: 返回CVE ID是否有效
+//
+// 行为:
+//   - 使用github.com/scagogogo/cve库的ValidateCve函数验证CVE ID
+//   - 验证包括格式和年份有效性检查
+//
+// 示例:
+//
+//	isValid := ValidateCVE("CVE-2021-44228") // 返回true
+//	isValid := ValidateCVE("CVE-2099-12345") // 返回false (年份超前)
+//	isValid := ValidateCVE("CVE2021-44228")  // 返回false (格式错误)
+func ValidateCVE(cveID string) bool {
+	return cve.ValidateCve(cveID)
 }
 
 // QueryByProduct 根据产品信息查询相关CVE
@@ -416,28 +515,7 @@ func GetCVEInfo(cves []*CVEReference, cveID string) *CVEReference {
 //   - 根据供应商、产品名和版本进行匹配过滤
 //   - 对于每个CVE，一旦发现一个匹配的CPE，便立即添加到结果中并跳过该CVE的其余CPE，避免重复
 //   - 匹配时vendor和product不区分大小写，但version区分大小写
-//
-// 数据样例:
-//
-//	输入CVE列表: [
-//	  {CVEID: "CVE-2021-44228", AffectedCPEs: ["cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*"]},
-//	  {CVEID: "CVE-2022-23307", AffectedCPEs: ["cpe:2.3:a:apache:log4j:2.1:*:*:*:*:*:*:*"]},
-//	  {CVEID: "CVE-2022-12345", AffectedCPEs: ["cpe:/a:vendor:product:1.0"]}
-//	]
-//
-//	查询1: QueryByProduct(cves, "apache", "log4j", "")
-//	返回: [
-//	  {CVEID: "CVE-2021-44228", ...},
-//	  {CVEID: "CVE-2022-23307", ...}
-//	]
-//
-//	查询2: QueryByProduct(cves, "apache", "log4j", "2.0")
-//	返回: [
-//	  {CVEID: "CVE-2021-44228", ...}
-//	]
-//
-//	查询3: QueryByProduct(cves, "", "", "")
-//	返回: [所有CVE...]
+//   - 使用scagogogo/cve库对CVE ID进行标准化和验证
 //
 // 示例:
 //
@@ -454,25 +532,23 @@ func GetCVEInfo(cves []*CVEReference, cveID string) *CVEReference {
 func QueryByProduct(cves []*CVEReference, vendor, product string, version string) []*CVEReference {
 	var results []*CVEReference
 
-	for _, cve := range cves {
-		for _, cpeString := range cve.AffectedCPEs {
+	for _, cveRef := range cves {
+		// 确保CVEID是标准格式
+		cveRef.CVEID = cve.Format(cveRef.CVEID)
+
+		for _, cpeString := range cveRef.AffectedCPEs {
 			// 首先尝试解析CPE
 			var cpe *CPE
 			var err error
 
 			// 判断CPE字符串格式并进行相应解析
-			// CPE (Common Platform Enumeration) 是一种标准化的方法，用于识别IT系统、软件和软件包
 			if strings.HasPrefix(cpeString, "cpe:2.3:") {
-				// 处理CPE 2.3格式 (形如 "cpe:2.3:a:vendor:product:version:...")
-				// 这是较新的URI绑定格式，使用冒号分隔各个组件
+				// 处理CPE 2.3格式
 				cpe, err = ParseCpe23(cpeString)
 			} else if strings.HasPrefix(cpeString, "cpe:/") {
-				// 处理CPE 2.2格式 (形如 "cpe:/a:vendor:product:version:...")
-				// 这是较旧的格式，以斜杠开头，使用冒号分隔各个组件
+				// 处理CPE 2.2格式
 				cpe, err = ParseCpe22(cpeString)
 			} else {
-				// 跳过不符合CPE格式规范的字符串
-				// 如果字符串既不是CPE 2.3格式也不是CPE 2.2格式，则忽略此项并继续处理下一项
 				continue
 			}
 
@@ -486,7 +562,7 @@ func QueryByProduct(cves []*CVEReference, vendor, product string, version string
 			versionMatch := version == "" || string(cpe.Version) == version || string(cpe.Version) == "*"
 
 			if vendorMatch && productMatch && versionMatch {
-				results = append(results, cve)
+				results = append(results, cveRef)
 				break // 找到一个匹配项即可，避免重复添加同一个CVE
 			}
 		}
