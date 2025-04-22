@@ -1,712 +1,693 @@
 # CPE - Common Platform Enumeration 库
 
-这是一个用于解析、匹配和管理 CPE (Common Platform Enumeration) 信息的 Go 语言库。CPE是一种标准化方法，用于标识IT系统、软件和软件包的信息技术产品、平台和组件。
+<div align="center">
 
-## 功能特性
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Go Version](https://img.shields.io/badge/go-%3E%3D1.18-blue.svg)
 
-- 支持 CPE 2.2 和 2.3 格式的解析和生成
-- 支持 CPE 名称匹配和比较（包括通配符和特殊值）
-- 支持 WFN (Well-Formed Name) 格式及其转换
-- 支持 CPE 适用性语言 (CPE Applicability Language)
-- 提供版本比较和范围匹配功能
-- 提供 CPE 字典功能，支持 XML 导入导出
-- 支持 CVE 与 CPE 的关联查询
-- 提供高级匹配算法（支持部分匹配、超集匹配等）
-- 支持 CPE 集合操作（并集、交集、差集等）
-- 集成 NVD CPE Feed，提供漏洞关联查询
-- 结构化的错误处理机制
-- 支持多种存储后端的数据持久化
-- 集成缓存机制，优化查询性能
+</div>
 
-## 安装
+## 📖 简介
+
+CPE (Common Platform Enumeration) 库是一个完整的Go语言实现，用于处理、解析、匹配和存储CPE (通用平台枚举)。CPE是一种结构化命名方案，用于标识IT系统、软件和软件包的类别。
+
+该库还包括与CVE (Common Vulnerabilities and Exposures) 集成的功能，使开发者能够将软件组件与已知的安全漏洞关联起来。
+
+## ✨ 特性
+
+- 完整支持CPE 2.2和CPE 2.3格式
+- 高级匹配功能，包括正则表达式和模糊匹配
+- 内置版本比较功能
+- 表达式语言用于复杂的适用性语句
+- 多种存储选项（内存、文件）
+- 与NVD数据源集成
+- CVE关联和查询功能
+- 可扩展的数据源架构
+
+## 🚀 安装
+
+使用Go模块安装:
 
 ```bash
 go get github.com/scagogogo/cpe
 ```
 
-## API 用法文档
+## 🔍 快速开始
 
-本节详细介绍库的主要API和使用方法，包括代码示例和说明。
-
-### 1. CPE 解析与格式化
-
-#### 1.1 解析 CPE 字符串
-
-CPE库支持解析 CPE 2.2 和 2.3 两种格式的字符串，并将其转换为内部的 `CPE` 结构体。
+### 基本使用
 
 ```go
-// 解析 CPE 2.3 格式
-cpe23, err := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Vendor: %s, Product: %s, Version: %s\n", 
-    cpe23.Vendor, cpe23.ProductName, cpe23.Version)
-// 输出: Vendor: microsoft, Product: windows, Version: 10
-
-// 解析 CPE 2.2 格式
-cpe22, err := cpe.ParseCpe22("cpe:/a:microsoft:windows:10")
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Vendor: %s, Product: %s, Version: %s\n", 
-    cpe22.Vendor, cpe22.ProductName, cpe22.Version)
-// 输出: Vendor: microsoft, Product: windows, Version: 10
-```
-
-#### 1.2 手动创建 CPE 对象
-
-您可以通过手动创建 `CPE` 结构体对象，然后使用 `GetURI` 方法获取其标准化的 CPE 字符串表示。
-
-```go
-// 创建表示 Oracle Java 8 的 CPE
-manualCpe := &cpe.CPE{
-    Part:        *cpe.PartApplication, // 应用程序
-    Vendor:      "oracle",
-    ProductName: "java",
-    Version:     "1.8.0",
-    Update:      "291",
-}
-
-// 将CPE对象格式化为CPE 2.3字符串
-cpeUri := manualCpe.GetURI()
-fmt.Printf("生成的CPE 2.3 URI: %s\n", cpeUri)
-// 输出: 生成的CPE 2.3 URI: cpe:2.3:a:oracle:java:1.8.0:291:*:*:*:*:*:*
-```
-
-#### 1.3 格式转换 (CPE 2.2 ↔ CPE 2.3)
-
-```go
-// 从 CPE 2.2 转换到 CPE 2.3
-cpe22Str := "cpe:/o:microsoft:windows_10:-"
-cpe22Obj, err := cpe.ParseCpe22(cpe22Str)
-if err != nil {
-    log.Fatal(err)
-}
-cpe23Str := cpe22Obj.GetURI()
-fmt.Printf("CPE 2.2: %s\n", cpe22Str)
-fmt.Printf("转换到CPE 2.3: %s\n", cpe23Str)
-// 输出: 
-// CPE 2.2: cpe:/o:microsoft:windows_10:-
-// 转换到CPE 2.3: cpe:2.3:o:microsoft:windows_10:-:*:*:*:*:*:*:*
-```
-
-### 2. CPE 匹配
-
-CPE匹配是该库的核心功能，用于确定一个 CPE 是否与另一个 CPE 或匹配条件相匹配。
-
-#### 2.1 基本匹配
-
-```go
-// 创建两个CPE对象
-cpe1, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-cpe2, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:*:*:*:*:*:*:*:*")
-
-// 使用Match方法检查匹配
-if cpe1.Match(cpe2) {
-    fmt.Println("CPE1 匹配 CPE2") // 会输出
-}
-
-if cpe2.Match(cpe1) {
-    fmt.Println("CPE2 匹配 CPE1") // 会输出
-}
-```
-
-#### 2.2 使用 MatchCPE 函数
-
-`MatchCPE` 函数提供了更灵活的匹配选项，可以实现忽略版本、版本范围匹配等高级功能。
-
-```go
-// 创建匹配条件
-criteria := &cpe.CPE{
-    Part:        *cpe.PartApplication,
-    Vendor:      "microsoft",
-    ProductName: "windows",
-}
-
-// 创建目标CPE
-target, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-
-// 默认匹配选项
-defaultOptions := cpe.DefaultMatchOptions()
-match := cpe.MatchCPE(criteria, target, defaultOptions)
-fmt.Printf("默认选项匹配结果: %t\n", match)
-// 输出: 默认选项匹配结果: true
-
-// 忽略版本匹配
-ignoreVersionOptions := &cpe.MatchOptions{
-    IgnoreVersion: true,
-}
-match = cpe.MatchCPE(criteria, target, ignoreVersionOptions)
-fmt.Printf("忽略版本匹配结果: %t\n", match)
-// 输出: 忽略版本匹配结果: true
-```
-
-#### 2.3 版本范围匹配
-
-```go
-// 创建版本范围匹配选项
-versionRangeOptions := &cpe.MatchOptions{
-    VersionRange: true,
-    MinVersion:   "3.0",
-    MaxVersion:   "4.0",
-}
-
-// 创建目标CPE (版本3.5)
-target, _ := cpe.ParseCpe23("cpe:2.3:a:apache:log4j:3.5:*:*:*:*:*:*:*")
-
-// 创建匹配条件
-criteria := &cpe.CPE{
-    Part:        *cpe.PartApplication,
-    Vendor:      "apache",
-    ProductName: "log4j",
-}
-
-// 检查版本范围匹配
-match := cpe.MatchCPE(criteria, target, versionRangeOptions)
-fmt.Printf("版本范围匹配结果: %t\n", match)
-// 输出: 版本范围匹配结果: true
-```
-
-#### 2.4 正则表达式匹配
-
-```go
-// 创建使用正则表达式的匹配选项
-regexOptions := &cpe.MatchOptions{
-    UseRegex: true,
-}
-
-// 创建使用正则表达式的匹配条件
-regexCriteria := &cpe.CPE{
-    Part:        *cpe.PartApplication,
-    Vendor:      "spring.*",
-    ProductName: "spring-.*",
-}
-
-// 创建目标CPE
-target, _ := cpe.ParseCpe23("cpe:2.3:a:spring-projects:spring-framework:5.3.20:*:*:*:*:*:*:*")
-
-// 检查正则表达式匹配
-match := cpe.MatchCPE(regexCriteria, target, regexOptions)
-fmt.Printf("正则匹配结果: %t\n", match)
-// 输出: 正则匹配结果: true
-```
-
-### 3. CPE 适用性语言
-
-CPE 适用性语言允许您创建复杂的逻辑组合表达式，用于匹配 CPE。
-
-#### 3.1 解析适用性语言表达式
-
-```go
-// 创建复杂的适用性表达式
-exprStr := "AND(cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*, NOT(cpe:2.3:a:microsoft:windows:10:1903:*:*:*:*:*:*))"
-expr, err := cpe.ParseExpression(exprStr)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 检查特定 CPE 是否匹配表达式
-cpe, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:2004:*:*:*:*:*:*")
-if expr.Evaluate(cpe) {
-    fmt.Println("CPE 匹配表达式")
-    // 输出: CPE 匹配表达式
-}
-```
-
-#### 3.2 复杂逻辑组合
-
-支持的表达式类型包括：
-- 单个CPE表达式：`cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*`
-- AND逻辑组合：`AND(expr1, expr2, ...)`
-- OR逻辑组合：`OR(expr1, expr2, ...)`
-- NOT逻辑求反：`NOT(expr)`
-
-```go
-// OR 表达式示例
-orExprStr := "OR(cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:windows:11:*:*:*:*:*:*:*)"
-orExpr, _ := cpe.ParseExpression(orExprStr)
-
-// AND 表达式示例
-andExprStr := "AND(cpe:2.3:a:microsoft:*:*:*:*:*:*:*:*:*, cpe:2.3:a:*:windows:*:*:*:*:*:*:*:*)"
-andExpr, _ := cpe.ParseExpression(andExprStr)
-
-// 嵌套表达式示例
-nestedExprStr := "AND(cpe:2.3:a:microsoft:*:*:*:*:*:*:*:*:*, NOT(OR(cpe:2.3:a:*:office:*:*:*:*:*:*:*:*, cpe:2.3:a:*:edge:*:*:*:*:*:*:*:*)))"
-nestedExpr, _ := cpe.ParseExpression(nestedExprStr)
-```
-
-#### 3.3 过滤 CPE 列表
-
-```go
-// 创建一个CPE列表
-cpeList := []*cpe.CPE{
-    cpe1, // Windows 10
-    cpe2, // Windows (通配)
-    cpe3, // Office
-}
-
-// 使用表达式过滤列表
-filteredList := cpe.FilterCPEs(cpeList, expr)
-fmt.Printf("过滤后的CPE数量: %d\n", len(filteredList))
-```
-
-### 4. CPE 字典
-
-CPE 字典是一个包含多个 CPE 条目的集合，通常用于存储和查询 CPE 数据。
-
-#### 4.1 解析 CPE 字典 XML
-
-```go
-// 解析 CPE 字典 XML
-file, _ := os.Open("official-cpe-dictionary_v2.3.xml")
-dict, err := cpe.ParseDictionary(file)
-if err != nil {
-    log.Fatal(err)
-}
-
-fmt.Printf("字典包含 %d 个CPE条目\n", len(dict.Items))
-fmt.Printf("生成日期: %s\n", dict.GeneratedAt.Format(time.RFC3339))
-```
-
-#### 4.2 创建和存储 CPE 字典
-
-```go
-// 创建 CPE 条目
-cpeWin10, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-win10Item := &cpe.CPEItem{
-    Name:  cpeWin10.GetURI(),
-    Title: "Microsoft Windows 10",
-    References: []cpe.Reference{
-        {
-            URL:  "https://www.microsoft.com/windows",
-            Type: "Vendor",
-        },
-    },
-    CPE: cpeWin10,
-}
-
-// 创建 CPE 字典
-dictionary := &cpe.CPEDictionary{
-    Items:         []*cpe.CPEItem{win10Item},
-    GeneratedAt:   time.Now(),
-    SchemaVersion: "2.3",
-}
-
-// 初始化文件存储
-storage, err := cpe.NewFileStorage("./cpe-data", true)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 存储字典
-err = storage.StoreDictionary(dictionary)
-if err != nil {
-    log.Fatal(err)
-}
-```
-
-#### 4.3 检索和搜索 CPE 字典
-
-```go
-// 检索字典
-retrievedDict, err := storage.RetrieveDictionary()
-if err != nil {
-    log.Fatal(err)
-}
-
-// 创建搜索条件
-searchCriteria, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:*:*:*:*:*:*:*:*:*")
-
-// 搜索匹配的 CPE 条目
-for _, item := range retrievedDict.Items {
-    if cpe.MatchCPE(searchCriteria, item.CPE, nil) {
-        fmt.Printf("找到匹配项: %s - %s\n", item.Name, item.Title)
-    }
-}
-```
-
-### 5. 存储与持久化
-
-该库提供了多种存储实现，用于持久化 CPE 和相关数据。
-
-#### 5.1 文件存储
-
-```go
-// 创建文件存储
-fsStorage, err := cpe.NewFileStorage("./cpe-data", true) // 第二个参数表示是否使用缓存
-if err != nil {
-    log.Fatal(err)
-}
-defer fsStorage.Close()
-
-// 存储 CPE
-cpe1, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-err = fsStorage.StoreCPE(cpe1)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 检索 CPE
-retrievedCPE, err := fsStorage.RetrieveCPE(cpe1.GetURI())
-if err != nil {
-    log.Fatal(err)
-}
-```
-
-#### 5.2 内存存储
-
-```go
-// 创建内存存储（适合临时数据或小型数据集）
-memStorage := cpe.NewMemoryStorage()
-memStorage.Initialize()
-defer memStorage.Close()
-
-// 存储 CPE
-cpe1, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-err := memStorage.StoreCPE(cpe1)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 检索 CPE
-retrievedCPE, err := memStorage.RetrieveCPE(cpe1.GetURI())
-if err != nil {
-    log.Fatal(err)
-}
-```
-
-#### 5.3 搜索 CPE
-
-```go
-// 创建搜索条件
-criteria := &cpe.CPE{
-    Part:        *cpe.PartApplication,
-    Vendor:      "microsoft",
-    ProductName: "windows",
-}
-
-// 搜索匹配的 CPE
-options := &cpe.MatchOptions{IgnoreVersion: true}
-results, err := fsStorage.SearchCPE(criteria, options)
-if err != nil {
-    log.Fatal(err)
-}
-
-fmt.Printf("找到 %d 个匹配项\n", len(results))
-for _, cpe := range results {
-    fmt.Printf("- %s\n", cpe.GetURI())
-}
-```
-
-### 6. NVD 集成
-
-该库提供了与美国国家漏洞数据库(NVD)集成的功能，可以下载和管理 CPE 和 CVE 数据。
-
-#### 6.1 初始化 NVD 数据源
-
-```go
-// 设置数据源
-nvdDataSource := &cpe.DataSource{
-    Type:        "nvd",
-    Name:        "NVD CPE Dictionary",
-    Description: "National Vulnerability Database CPE Dictionary",
-    URL:         "https://nvd.nist.gov/feeds/json/cpematch/1.0/nvdcpematch-1.0.json.gz",
-    CacheSettings: &cpe.CacheSettings{
-        Enabled:     true,
-        Directory:   "./nvd-cache",
-        ExpiryHours: 24,
-    },
-}
-```
-
-#### 6.2 下载和管理 NVD 数据
-
-```go
-// 设置下载选项
-options := cpe.DefaultNVDFeedOptions()
-options.CacheDir = "./nvd-cache"
-options.ShowProgress = true
-
-// 下载并解析 NVD 数据
-nvdData, err := cpe.DownloadAllNVDData(options)
-if err != nil {
-    log.Fatal(err)
-}
-
-// 查找与特定 CPE 相关的 CVE
-apacheLog4j, _ := cpe.ParseCpe23("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
-cves := nvdData.FindCVEsForCPE(apacheLog4j)
-fmt.Printf("找到 %d 个与 Apache Log4j 2.0 相关的 CVE\n", len(cves))
-```
-
-#### 6.3 管理数据更新
-
-```go
-// 检索上次更新时间
-lastUpdateTime, err := storage.RetrieveModificationTimestamp("nvd_last_updated")
-if err != nil {
-    // 处理错误
-}
-
-// 检查是否需要更新
-now := time.Now()
-needsUpdate := true
-
-if !lastUpdateTime.IsZero() {
-    // 如果上次更新时间不是零值，检查是否已经超过24小时
-    timeSinceLastUpdate := now.Sub(lastUpdateTime)
-    needsUpdate = timeSinceLastUpdate.Hours() >= 24
-}
-
-if needsUpdate {
-    // 执行更新
-    // ...
-    
-    // 更新时间戳
-    err = storage.StoreModificationTimestamp("nvd_last_updated", now)
+package main
+
+import (
+    "fmt"
+    "github.com/scagogogo/cpe"
+)
+
+func main() {
+    // 解析CPE 2.3字符串
+    cpeObj, err := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
     if err != nil {
-        log.Fatal(err)
+        panic(err)
+    }
+    
+    fmt.Printf("CPE详情: 供应商=%s, 产品=%s, 版本=%s\n", 
+               cpeObj.Vendor, cpeObj.ProductName, cpeObj.Version)
+               
+    // 创建匹配条件
+    criteria := &cpe.CPE{
+        Vendor: "microsoft",
+        ProductName: "windows",
+    }
+    
+    // 执行匹配
+    if cpeObj.Match(criteria) {
+        fmt.Println("匹配成功!")
     }
 }
 ```
 
-### 7. CVE 关联
-
-该库支持管理 CPE 和 CVE (Common Vulnerabilities and Exposures) 之间的关联关系。
-
-#### 7.1 创建和管理 CVE 引用
+### 使用CVE功能
 
 ```go
-// 创建 CVE 引用
-cve := cpe.NewCVEReference("CVE-2021-44228") // Log4Shell
-cve.Description = "Log4Shell 远程代码执行漏洞"
-cve.SetSeverity(9.8) // CVSS 分数
+package main
 
-// 添加受影响的 CPE
-cve.AddAffectedCPE("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
-cve.AddAffectedCPE("cpe:2.3:a:apache:log4j:2.1:*:*:*:*:*:*:*")
+import (
+    "fmt"
+    "github.com/scagogogo/cpe"
+)
 
-// 存储 CVE
-err = fsStorage.StoreCVE(cve)
-if err != nil {
-    log.Fatal(err)
+func main() {
+    // 从文本中提取CVE ID
+    text := "系统受到CVE-2021-44228和CVE-2022-22965漏洞的影响"
+    cveIDs := cpe.ExtractCVEsFromText(text)
+    fmt.Printf("发现CVE: %v\n", cveIDs)
+    
+    // 按年份分组
+    grouped := cpe.GroupCVEsByYear(cveIDs)
+    fmt.Printf("按年份分组: %v\n", grouped)
+    
+    // 创建CVE引用
+    cveRef := cpe.NewCVEReference("CVE-2021-44228")
+    cveRef.Description = "Log4j远程代码执行漏洞"
+    cveRef.SetSeverity(10.0) // Critical
+    
+    // 添加受影响的CPE
+    cveRef.AddAffectedCPE("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
 }
 ```
 
-#### 7.2 查找 CVE 和 CPE 关联
+## 📚 API 文档
+
+<details open>
+<summary><b>CPE 相关功能</b></summary>
+
+### 解析与格式化
+
+#### `ParseCpe23(cpe23 string) (*CPE, error)`
+
+解析CPE 2.3格式字符串并转换为CPE结构体。
 
 ```go
-// 根据 CPE 查找相关的 CVE
-cpe, _ := cpe.ParseCpe23("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
-relatedCVEs, err := fsStorage.FindCVEsByCPE(cpe)
-if err != nil {
-    log.Fatal(err)
-}
+cpe, err := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+```
 
-fmt.Printf("找到 %d 个关联的 CVE\n", len(relatedCVEs))
-for _, cve := range relatedCVEs {
-    fmt.Printf("- %s: %s (CVSS: %.1f)\n", cve.ID, cve.Description, cve.CVSS)
-}
+#### `ParseCpe22(cpe22 string) (*CPE, error)`
 
-// 根据 CVE ID 查找相关的 CPE
-relatedCPEs, err := fsStorage.FindCPEsByCVE("CVE-2021-44228")
-if err != nil {
-    log.Fatal(err)
-}
+解析CPE 2.2格式字符串并转换为CPE结构体。
 
-fmt.Printf("找到 %d 个受影响的 CPE\n", len(relatedCPEs))
-for _, cpe := range relatedCPEs {
-    fmt.Printf("- %s\n", cpe.GetURI())
+```go
+cpe, err := cpe.ParseCpe22("cpe:/a:microsoft:windows:10")
+```
+
+#### `FormatCpe23(cpe *CPE) string`
+
+将CPE对象格式化为CPE 2.3字符串。
+
+```go
+cpeString := cpe.FormatCpe23(cpeObj)
+```
+
+#### `FormatCpe22(cpe *CPE) string`
+
+将CPE对象格式化为CPE 2.2字符串。
+
+```go
+cpeString := cpe.FormatCpe22(cpeObj)
+```
+
+### 匹配功能
+
+#### `Match(other *CPE) bool`
+
+检查CPE是否与给定的CPE匹配。
+
+```go
+if cpe1.Match(cpe2) {
+    fmt.Println("匹配成功")
 }
 ```
 
-### 8. 高级匹配和集合操作
+#### `MatchCPE(criteria *CPE, target *CPE, options *MatchOptions) bool`
 
-该库提供了高级的匹配算法和集合操作功能。
-
-#### 8.1 CPE 集合
+高级CPE匹配功能，支持自定义匹配选项。
 
 ```go
-// 创建 CPE 集合
-set := cpe.NewCPESet()
-
-// 添加 CPE 到集合
-cpe1, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-cpe2, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:office:2019:*:*:*:*:*:*:*")
-set.Add(cpe1, cpe2)
-
-// 集合操作
-otherSet := cpe.NewCPESet()
-otherSet.Add(cpe2)
-
-// 求并集
-unionSet := set.Union(otherSet)
-
-// 求交集
-intersectSet := set.Intersect(otherSet)
-
-// 求差集
-diffSet := set.Difference(otherSet)
+options := cpe.DefaultMatchOptions()
+options.IgnoreVersion = true
+if cpe.MatchCPE(criteria, target, options) {
+    fmt.Println("匹配成功")
+}
 ```
 
-#### 8.2 高级匹配
+#### `AdvancedMatchCPE(criteria *CPE, target *CPE, options *AdvancedMatchOptions) bool`
+
+最灵活的CPE匹配功能，支持高级选项如正则表达式、模糊匹配等。
 
 ```go
-// 创建高级匹配选项
 options := cpe.NewAdvancedMatchOptions()
-options.MatchMode = "distance"      // 距离匹配模式
-options.ScoreThreshold = 0.7        // 要求最少 70% 匹配度
-
-// 使用高级匹配过滤集合
-filterCPE, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:*:*:*:*:*:*:*:*:*")
-microsoftProducts := set.AdvancedFilter(filterCPE, options)
+options.UseRegex = true
+options.IgnoreCase = true
+if cpe.AdvancedMatchCPE(criteria, target, options) {
+    fmt.Println("匹配成功")
+}
 ```
 
-### 9. WFN (Well-Formed Name) 转换
+### 版本比较
 
-WFN是CPE规范定义的内部表示形式，该库支持CPE和WFN之间的转换。
+#### `compareVersions(criteria *CPE, target *CPE, options *AdvancedMatchOptions) bool`
+
+比较两个CPE的版本。
 
 ```go
-// 将CPE转换为WFN
-cpe, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-wfn := cpe.ToWFN()
-
-// 将WFN转换回CPE
-convertedCpe := wfn.ToCPE()
+options := cpe.NewAdvancedMatchOptions()
+options.VersionCompareMode = "greater"
+options.VersionLower = "2.0"
+result := cpe.compareVersions(cpe1, cpe2, options)
 ```
 
-### 10. 错误处理
+#### `compareVersionStrings(v1, v2 string) int`
 
-该库使用结构化的错误处理机制，提供了多种预定义错误类型。
+比较两个版本字符串，返回-1 (v1 < v2)、0 (v1 == v2) 或 1 (v1 > v2)。
 
 ```go
-// 尝试解析无效的CPE
-_, err := cpe.ParseCpe23("invalid:format")
-if err != nil {
-    // 检查错误类型
-    if invalidFormatErr, ok := err.(*cpe.InvalidFormatError); ok {
-        fmt.Printf("无效的CPE格式: %s\n", invalidFormatErr.Input)
-    } else {
-        fmt.Printf("解析失败: %v\n", err)
-    }
-}
-
-// 尝试检索不存在的CPE
-_, err = storage.RetrieveCPE("non-existent-cpe")
-if err != nil {
-    if notFoundErr, ok := err.(*cpe.NotFoundError); ok {
-        fmt.Printf("未找到CPE: %s\n", notFoundErr.ID)
-    } else {
-        fmt.Printf("检索失败: %v\n", err)
-    }
+result := cpe.compareVersionStrings("1.2.3", "1.3.0")
+if result < 0 {
+    fmt.Println("v1 < v2")
 }
 ```
 
-## 高级使用场景
+</details>
 
-以下是一些高级使用场景示例，展示如何将库的不同功能结合起来。
+<details open>
+<summary><b>CVE 相关功能</b></summary>
 
-### 场景1: 漏洞扫描与检测
+### CVE引用
+
+#### `NewCVEReference(cveID string) *CVEReference`
+
+创建一个新的CVE引用。
 
 ```go
-// 创建一个包含系统中所有软件的CPE清单
-systemCPEs := []*cpe.CPE{
-    // Windows 10系统
-    parseCpe("cpe:2.3:o:microsoft:windows:10:1909:*:*:*:*:*:*"),
-    // 已安装的软件
-    parseCpe("cpe:2.3:a:adobe:acrobat_reader:dc:2021.001.20145:*:*:*:*:*:*"),
-    parseCpe("cpe:2.3:a:google:chrome:92.0.4515.131:*:*:*:*:*:*:*"),
-    parseCpe("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*"),
-}
-
-// 从NVD获取最新漏洞数据
-nvdData, _ := cpe.DownloadAllNVDData(options)
-
-// 对每个CPE检查漏洞
-for _, systemCpe := range systemCPEs {
-    cves := nvdData.FindCVEsForCPE(systemCpe)
-    if len(cves) > 0 {
-        fmt.Printf("发现 %s 存在 %d 个漏洞!\n", systemCpe.GetURI(), len(cves))
-        
-        // 输出高危漏洞
-        for _, cve := range cves {
-            if cve.CVSS >= 7.0 {
-                fmt.Printf("  高危漏洞: %s (CVSS: %.1f) - %s\n", 
-                    cve.ID, cve.CVSS, cve.Description)
-            }
-        }
-    }
-}
+cveRef := cpe.NewCVEReference("CVE-2021-44228")
 ```
 
-### 场景2: 软件资产管理
+#### `AddAffectedCPE(cpeURI string)`
+
+向CVE引用添加受影响的CPE。
 
 ```go
-// 创建软件资产存储
-assetStorage, _ := cpe.NewFileStorage("./asset-inventory", true)
-
-// 导入现有资产
-existingDict, _ := assetStorage.RetrieveDictionary()
-assetManager := cpe.NewAssetManager(existingDict)
-
-// 添加新发现的软件
-newSoftware, _ := cpe.ParseCpe23("cpe:2.3:a:oracle:java:11.0.12:*:*:*:*:*:*:*")
-assetManager.AddAsset(newSoftware, "Development Server", "Critical")
-
-// 查找特定类型的资产
-javaAssets := assetManager.FindAssetsByCriteria(&cpe.CPE{
-    Vendor:      "oracle",
-    ProductName: "java",
-})
-
-// 生成资产报告
-report := assetManager.GenerateReport()
-for _, category := range report.Categories {
-    fmt.Printf("%s: %d 个资产\n", category.Name, len(category.Assets))
-}
+cveRef.AddAffectedCPE("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
 ```
 
-### 场景3: 补丁管理
+#### `RemoveAffectedCPE(cpeURI string) bool`
+
+从CVE引用中移除受影响的CPE。
 
 ```go
-// 创建补丁管理器
-patchManager := cpe.NewPatchManager(storage)
+removed := cveRef.RemoveAffectedCPE("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
+```
 
-// 注册需要监控的软件
-patchManager.RegisterSoftware("Apache Log4j", "cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
-patchManager.RegisterSoftware("Windows 10", "cpe:2.3:o:microsoft:windows:10:1909:*:*:*:*:*:*")
+#### `AddReference(reference string)`
 
-// 检查补丁状态
-patchStatus, _ := patchManager.CheckPatchStatus()
-for software, status := range patchStatus {
-    if status.OutOfDate {
-        fmt.Printf("%s 需要更新! 当前版本: %s, 最新版本: %s\n",
-            software, status.CurrentVersion, status.LatestVersion)
-        
-        // 显示解决的漏洞
-        for _, cve := range status.ResolvedVulnerabilities {
-            fmt.Printf("  - 更新后将修复: %s (%s)\n", cve.ID, cve.Description)
-        }
-    }
+添加参考链接到CVE引用。
+
+```go
+cveRef.AddReference("https://nvd.nist.gov/vuln/detail/CVE-2021-44228")
+```
+
+#### `SetSeverity(cvssScore float64)`
+
+设置CVE的CVSS评分和对应的严重性级别。
+
+```go
+cveRef.SetSeverity(9.8) // 设置为Critical级别
+```
+
+#### `SetMetadata(key string, value interface{})`
+
+设置CVE的元数据。
+
+```go
+cveRef.SetMetadata("exploitAvailable", true)
+```
+
+#### `GetMetadata(key string) (interface{}, bool)`
+
+获取CVE的元数据。
+
+```go
+value, exists := cveRef.GetMetadata("exploitAvailable")
+```
+
+#### `RemoveMetadata(key string) bool`
+
+移除CVE的元数据。
+
+```go
+removed := cveRef.RemoveMetadata("exploitAvailable")
+```
+
+### CVE查询与处理
+
+#### `QueryByCVE(cves []*CVEReference, cveID string) []*CPE`
+
+根据CVE ID查询关联的CPE。
+
+```go
+cpes := cpe.QueryByCVE(cveList, "CVE-2021-44228")
+```
+
+#### `GetCVEInfo(cves []*CVEReference, cveID string) *CVEReference`
+
+获取CVE的详细信息。
+
+```go
+cveInfo := cpe.GetCVEInfo(cveList, "CVE-2021-44228")
+```
+
+#### `ExtractCVEsFromText(text string) []string`
+
+从文本中提取CVE ID。
+
+```go
+cveIDs := cpe.ExtractCVEsFromText("系统受到CVE-2021-44228影响")
+```
+
+#### `GroupCVEsByYear(cveIDs []string) map[string][]string`
+
+按年份对CVE ID进行分组。
+
+```go
+grouped := cpe.GroupCVEsByYear(cveIDs)
+```
+
+#### `SortCVEs(cveIDs []string) []string`
+
+对CVE ID列表进行排序。
+
+```go
+sorted := cpe.SortCVEs(cveIDs)
+```
+
+#### `RemoveDuplicateCVEs(cveIDs []string) []string`
+
+去除CVE ID列表中的重复项。
+
+```go
+unique := cpe.RemoveDuplicateCVEs(cveIDs)
+```
+
+#### `GetRecentCVEs(cveIDs []string, years int) []string`
+
+获取最近N年的CVE ID。
+
+```go
+recent := cpe.GetRecentCVEs(cveIDs, 2) // 获取最近2年的CVE
+```
+
+#### `ValidateCVE(cveID string) bool`
+
+验证CVE ID是否有效。
+
+```go
+isValid := cpe.ValidateCVE("CVE-2021-44228")
+```
+
+#### `QueryByProduct(cves []*CVEReference, vendor, product, version string) []*CVEReference`
+
+根据产品信息查询相关CVE。
+
+```go
+results := cpe.QueryByProduct(cveList, "apache", "log4j", "2.0")
+```
+
+</details>
+
+<details open>
+<summary><b>存储相关功能</b></summary>
+
+### 内存存储
+
+#### `NewMemoryStorage() *MemoryStorage`
+
+创建一个新的内存存储实例。
+
+```go
+storage := cpe.NewMemoryStorage()
+err := storage.Initialize()
+```
+
+#### `StoreCPE(cpe *CPE) error`
+
+存储CPE到内存。
+
+```go
+err := storage.StoreCPE(cpeObj)
+```
+
+#### `RetrieveCPE(id string) (*CPE, error)`
+
+从内存检索CPE。
+
+```go
+cpe, err := storage.RetrieveCPE("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+```
+
+### 文件存储
+
+#### `NewFileStorage(baseDir string, useCache bool) (*FileStorage, error)`
+
+创建一个新的文件存储实例。
+
+```go
+storage, err := cpe.NewFileStorage("./cpe_data", true)
+err = storage.Initialize()
+```
+
+#### `StoreCPE(cpe *CPE) error`
+
+存储CPE到文件系统。
+
+```go
+err := storage.StoreCPE(cpeObj)
+```
+
+#### `RetrieveCPE(id string) (*CPE, error)`
+
+从文件系统检索CPE。
+
+```go
+cpe, err := storage.RetrieveCPE("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+```
+
+### 通用存储接口
+
+所有存储实现都兼容Storage接口，可以互换使用。
+
+```go
+var storage cpe.Storage
+storage = cpe.NewMemoryStorage()
+// 或
+storage, _ = cpe.NewFileStorage("./cpe_data", true)
+
+// 使用通用接口操作
+err := storage.Initialize()
+err = storage.StoreCPE(cpeObj)
+cpe, err := storage.RetrieveCPE(cpeID)
+```
+
+</details>
+
+<details open>
+<summary><b>集合与过滤</b></summary>
+
+### CPE集合
+
+#### `NewCPESet(name string, description string) *CPESet`
+
+创建一个新的CPE集合。
+
+```go
+set := cpe.NewCPESet("Windows产品", "微软Windows系列产品")
+```
+
+#### `Add(cpe *CPE)`
+
+向集合中添加CPE。
+
+```go
+set.Add(cpeObj)
+```
+
+#### `Remove(cpe *CPE) bool`
+
+从集合中移除CPE。
+
+```go
+removed := set.Remove(cpeObj)
+```
+
+#### `Contains(cpe *CPE) bool`
+
+检查集合是否包含指定CPE。
+
+```go
+if set.Contains(cpeObj) {
+    fmt.Println("集合包含该CPE")
 }
 ```
 
-## 最佳实践
+#### `Size() int`
 
-1. **定期更新NVD数据**：漏洞数据库每天都在更新，建议至少每天更新一次NVD数据。
+返回集合大小。
 
-2. **使用缓存**：对于频繁访问的数据，启用缓存可以显著提高性能。
+```go
+count := set.Size()
+```
 
-3. **正确处理错误**：始终检查函数返回的错误，并根据错误类型采取适当的处理措施。
+#### `Filter(criteria *CPE, options *MatchOptions) *CPESet`
 
-4. **选择合适的存储后端**：对于大量数据，建议使用持久化存储；对于临时数据或小型数据集，可以使用内存存储。
+根据条件过滤集合。
 
-5. **版本控制**：在匹配CPE时，考虑使用版本范围和版本比较功能，以确保匹配的准确性。
+```go
+criteria := &cpe.CPE{Vendor: "microsoft"}
+options := cpe.DefaultMatchOptions()
+filteredSet := set.Filter(criteria, options)
+```
 
-## 许可证
+#### `Union(other *CPESet) *CPESet`
 
-本项目采用 MIT 许可证
+计算两个集合的并集。
+
+```go
+unionSet := set1.Union(set2)
+```
+
+#### `Intersection(other *CPESet) *CPESet`
+
+计算两个集合的交集。
+
+```go
+intersectionSet := set1.Intersection(set2)
+```
+
+#### `Difference(other *CPESet) *CPESet`
+
+计算两个集合的差集。
+
+```go
+differenceSet := set1.Difference(set2)
+```
+
+</details>
+
+<details open>
+<summary><b>适用性语言</b></summary>
+
+### 表达式
+
+#### `ParseExpression(expr string) (Expression, error)`
+
+解析适用性表达式。
+
+```go
+expr, err := cpe.ParseExpression("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+```
+
+#### `FilterCPEs(cpes []*CPE, expr Expression) []*CPE`
+
+使用表达式过滤CPE列表。
+
+```go
+filteredCPEs := cpe.FilterCPEs(cpeList, expr)
+```
+
+### 表达式类型
+
+- `CPEExpression` - 匹配单个CPE
+- `ANDExpression` - 匹配所有子表达式
+- `ORExpression` - 匹配任一子表达式
+- `NOTExpression` - 反转子表达式的匹配结果
+
+```go
+// AND表达式示例
+expr, _ := cpe.ParseExpression("AND(cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*, cpe:2.3:a:microsoft:office:2019:*:*:*:*:*:*:*)")
+
+// OR表达式示例
+expr, _ := cpe.ParseExpression("OR(cpe:2.3:a:microsoft:edge:*:*:*:*:*:*:*:*, cpe:2.3:a:google:chrome:*:*:*:*:*:*:*:*)")
+
+// NOT表达式示例
+expr, _ := cpe.ParseExpression("NOT(cpe:2.3:a:microsoft:edge:*:*:*:*:*:*:*:*)")
+```
+
+</details>
+
+<details open>
+<summary><b>NVD集成</b></summary>
+
+### NVD数据源
+
+#### `DefaultNVDFeedOptions() *NVDFeedOptions`
+
+创建默认的NVD Feed下载选项。
+
+```go
+options := cpe.DefaultNVDFeedOptions()
+options.CacheDir = "/tmp/nvd-cache"
+```
+
+#### `DownloadAndParseCPEDict(options *NVDFeedOptions) (*CPEDictionary, error)`
+
+下载并解析NVD CPE字典。
+
+```go
+dict, err := cpe.DownloadAndParseCPEDict(options)
+```
+
+#### `DownloadAndParseCPEMatch(options *NVDFeedOptions) (*CPEMatchData, error)`
+
+下载并解析NVD CPE Match数据。
+
+```go
+match, err := cpe.DownloadAndParseCPEMatch(options)
+```
+
+#### `DownloadAllNVDData(options *NVDFeedOptions) (*NVDCPEData, error)`
+
+下载所有NVD数据。
+
+```go
+data, err := cpe.DownloadAllNVDData(options)
+```
+
+### NVD数据查询
+
+#### `FindCVEsForCPE(cpe *CPE) []string`
+
+查找与特定CPE相关的所有CVE。
+
+```go
+cves := nvdData.FindCVEsForCPE(cpeObj)
+```
+
+#### `FindCPEsForCVE(cveID string) []*CPE`
+
+查找与特定CVE相关的所有CPE。
+
+```go
+cpes := nvdData.FindCPEsForCVE("CVE-2021-44228")
+```
+
+</details>
+
+<details open>
+<summary><b>数据源集成</b></summary>
+
+### 数据源
+
+#### `NewDataSource(sourceType DataSourceType, name, description, url string) *DataSource`
+
+创建新的数据源。
+
+```go
+ds := cpe.NewDataSource(cpe.DataSourceNVD, "NVD", "National Vulnerability Database", "https://services.nvd.nist.gov/rest/json/")
+```
+
+#### `CreateNVDDataSource(apiKey string) *DataSource`
+
+创建NVD数据源。
+
+```go
+nvd := cpe.CreateNVDDataSource("YOUR_API_KEY")
+```
+
+#### `CreateGitHubDataSource(token string) *DataSource`
+
+创建GitHub数据源。
+
+```go
+github := cpe.CreateGitHubDataSource("YOUR_GITHUB_TOKEN")
+```
+
+#### `CreateRedHatDataSource() *DataSource`
+
+创建RedHat数据源。
+
+```go
+redhat := cpe.CreateRedHatDataSource()
+```
+
+### 多源搜索
+
+#### `NewMultiSourceSearch(sources []*DataSource) *MultiSourceVulnerabilitySearch`
+
+创建新的多数据源搜索。
+
+```go
+sources := []*cpe.DataSource{nvd, github, redhat}
+search := cpe.NewMultiSourceSearch(sources)
+```
+
+#### `SearchByCVE(cveID string) ([]*CVEReference, error)`
+
+根据CVE ID在多个数据源中搜索。
+
+```go
+results, err := search.SearchByCVE("CVE-2021-44228")
+```
+
+#### `SearchByCPE(cpe *CPE) ([]*CVEReference, error)`
+
+根据CPE在多个数据源中搜索。
+
+```go
+results, err := search.SearchByCPE(cpeObj)
+```
+
+</details>
+
+## 📊 使用场景
+
+- 软件组件分析 (SCA)
+- 漏洞管理系统
+- 供应链安全
+- 合规检查
+- 资产清单管理
+- 安全产品集成
+
+## 📄 开源协议
+
+本项目采用 [MIT 协议](https://github.com/scagogogo/cpe/blob/main/LICENSE) 进行许可。
+
+## 🤝 贡献指南
+
+欢迎贡献代码、文档和反馈。请通过GitHub Issues和Pull Requests提交您的贡献。
+
+## 📦 相关项目
+
+- [scagogogo/cve](https://github.com/scagogogo/cve) - CVE处理工具库
 
 
 
