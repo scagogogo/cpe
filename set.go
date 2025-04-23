@@ -17,8 +17,8 @@ import (
  * 集合中的每个CPE元素都是唯一的，基于Cpe23字段进行重复检测。
  */
 type CPESet struct {
-	// Items 存储集合中的所有CPE对象
-	Items []*CPE
+	// items 存储集合中的所有CPE对象，键为Cpe23字段值
+	items map[string]*CPE
 
 	// Name 集合的名称，用于标识和区分不同集合
 	Name string
@@ -42,7 +42,7 @@ type CPESet struct {
  */
 func NewCPESet(name string, description string) *CPESet {
 	return &CPESet{
-		Items:       make([]*CPE, 0),
+		items:       make(map[string]*CPE),
 		Name:        name,
 		Description: description,
 	}
@@ -68,14 +68,13 @@ func NewCPESet(name string, description string) *CPESet {
  *   ```
  */
 func (s *CPESet) Add(cpe *CPE) {
-	// 检查是否已存在相同的CPE
-	for _, item := range s.Items {
-		if item.Cpe23 == cpe.Cpe23 {
-			return // 已存在，不添加
-		}
+	// 使用map实现O(1)时间复杂度的查找
+	if cpe == nil || cpe.GetURI() == "" {
+		return // 忽略无效CPE
 	}
 
-	s.Items = append(s.Items, cpe)
+	id := cpe.GetURI()
+	s.items[id] = cpe
 }
 
 /**
@@ -96,15 +95,19 @@ func (s *CPESet) Add(cpe *CPE) {
  *   ```
  */
 func (s *CPESet) Remove(cpe *CPE) bool {
-	for i, item := range s.Items {
-		if item.Cpe23 == cpe.Cpe23 {
-			// 移除找到的CPE
-			s.Items = append(s.Items[:i], s.Items[i+1:]...)
-			return true
-		}
+	if cpe == nil || cpe.GetURI() == "" {
+		return false
 	}
 
-	return false // 未找到CPE
+	id := cpe.GetURI()
+	_, exists := s.items[id]
+	if !exists {
+		return false // 未找到CPE
+	}
+
+	// 从map中删除
+	delete(s.items, id)
+	return true
 }
 
 /**
@@ -122,13 +125,12 @@ func (s *CPESet) Remove(cpe *CPE) bool {
  *   ```
  */
 func (s *CPESet) Contains(cpe *CPE) bool {
-	for _, item := range s.Items {
-		if item.Cpe23 == cpe.Cpe23 {
-			return true
-		}
+	if cpe == nil || cpe.GetURI() == "" {
+		return false
 	}
 
-	return false
+	_, exists := s.items[cpe.GetURI()]
+	return exists
 }
 
 /**
@@ -137,7 +139,7 @@ func (s *CPESet) Contains(cpe *CPE) bool {
  * @return int 集合中CPE的数量
  */
 func (s *CPESet) Size() int {
-	return len(s.Items)
+	return len(s.items)
 }
 
 /**
@@ -151,7 +153,7 @@ func (s *CPESet) Size() int {
  *   ```
  */
 func (s *CPESet) Clear() {
-	s.Items = make([]*CPE, 0)
+	s.items = make(map[string]*CPE)
 }
 
 /**
@@ -180,12 +182,12 @@ func (s *CPESet) Union(other *CPESet) *CPESet {
 	)
 
 	// 添加第一个集合的所有元素
-	for _, cpe := range s.Items {
+	for _, cpe := range s.items {
 		result.Add(cpe)
 	}
 
 	// 添加第二个集合的所有元素
-	for _, cpe := range other.Items {
+	for _, cpe := range other.items {
 		result.Add(cpe)
 	}
 
@@ -216,9 +218,17 @@ func (s *CPESet) Intersection(other *CPESet) *CPESet {
 		fmt.Sprintf("Intersection of sets %s and %s", s.Name, other.Name),
 	)
 
+	// 优化：遍历元素较少的集合
+	var smallerSet, largerSet *CPESet
+	if s.Size() < other.Size() {
+		smallerSet, largerSet = s, other
+	} else {
+		smallerSet, largerSet = other, s
+	}
+
 	// 添加同时在两个集合中的元素
-	for _, cpe := range s.Items {
-		if other.Contains(cpe) {
+	for id, cpe := range smallerSet.items {
+		if _, exists := largerSet.items[id]; exists {
 			result.Add(cpe)
 		}
 	}
@@ -251,8 +261,8 @@ func (s *CPESet) Difference(other *CPESet) *CPESet {
 	)
 
 	// 添加在s中但不在other中的元素
-	for _, cpe := range s.Items {
-		if !other.Contains(cpe) {
+	for id, cpe := range s.items {
+		if _, exists := other.items[id]; !exists {
 			result.Add(cpe)
 		}
 	}
@@ -294,7 +304,7 @@ func (s *CPESet) Filter(criteria *CPE, options *MatchOptions) *CPESet {
 	)
 
 	// 筛选匹配条件的CPE
-	for _, cpe := range s.Items {
+	for _, cpe := range s.items {
 		if matchCPE(cpe, criteria, options) {
 			result.Add(cpe)
 		}
@@ -339,7 +349,7 @@ func (s *CPESet) AdvancedFilter(criteria *CPE, options *AdvancedMatchOptions) *C
 	)
 
 	// 筛选匹配条件的CPE
-	for _, cpe := range s.Items {
+	for _, cpe := range s.items {
 		if AdvancedMatchCPE(criteria, cpe, options) {
 			result.Add(cpe)
 		}
@@ -349,34 +359,55 @@ func (s *CPESet) AdvancedFilter(criteria *CPE, options *AdvancedMatchOptions) *C
 }
 
 /**
- * Sort 对集合中的CPE进行排序
+ * ToSlice 将集合转换为CPE切片
+ *
+ * 此方法用于获取集合中所有CPE的切片形式，便于遍历和排序。
+ *
+ * @return []*CPE 包含集合中所有CPE的切片
+ */
+func (s *CPESet) ToSlice() []*CPE {
+	result := make([]*CPE, 0, len(s.items))
+	for _, cpe := range s.items {
+		result = append(result, cpe)
+	}
+	return result
+}
+
+/**
+ * Sort 对集合中的CPE进行排序并返回排序后的切片
+ *
+ * 注意：此方法不改变集合本身，只返回排序后的CPE切片。
  *
  * @param sortBy string 排序字段，可以是"part"、"vendor"、"product"、"version"或其他属性
  * @param ascending bool 是否按升序排序，false表示降序
+ * @return []*CPE 排序后的CPE切片
  *
  * 示例:
  *   ```go
  *   // 按产品名称升序排序
- *   microsoftSet.Sort("product", true)
+ *   sortedCPEs := microsoftSet.Sort("product", true)
  *
  *   // 按版本号降序排序（最新版本在前）
- *   microsoftSet.Sort("version", false)
+ *   sortedCPEs := microsoftSet.Sort("version", false)
  *   ```
  */
-func (s *CPESet) Sort(sortBy string, ascending bool) {
+func (s *CPESet) Sort(sortBy string, ascending bool) []*CPE {
+	cpes := s.ToSlice()
+
 	sorter := &cpeSorter{
-		cpes:      s.Items,
+		cpes:      cpes,
 		sortBy:    sortBy,
 		ascending: ascending,
 	}
 
 	sort.Sort(sorter)
+	return cpes
 }
 
 /**
  * Equals 检查两个集合是否完全相等
  *
- * 两个集合相等意味着它们包含完全相同的CPE集合，不要求顺序相同。
+ * 两个集合相等意味着它们包含完全相同的CPE集合。
  *
  * @param other *CPESet 要比较的另一个集合
  * @return bool 如果两个集合包含相同的CPE则返回true，否则返回false
@@ -394,8 +425,9 @@ func (s *CPESet) Equals(other *CPESet) bool {
 		return false
 	}
 
-	for _, cpe := range s.Items {
-		if !other.Contains(cpe) {
+	// 使用哈希表快速检查
+	for id := range s.items {
+		if _, exists := other.items[id]; !exists {
 			return false
 		}
 	}
@@ -420,8 +452,14 @@ func (s *CPESet) Equals(other *CPESet) bool {
  *   ```
  */
 func (s *CPESet) IsSubsetOf(other *CPESet) bool {
-	for _, cpe := range s.Items {
-		if !other.Contains(cpe) {
+	// 快速检查：如果当前集合比other大，则不可能是子集
+	if s.Size() > other.Size() {
+		return false
+	}
+
+	// 检查当前集合中的每个元素是否都在other中
+	for id := range s.items {
+		if _, exists := other.items[id]; !exists {
 			return false
 		}
 	}
@@ -470,7 +508,14 @@ func (s *CPESet) ToString() string {
 	builder.WriteString(fmt.Sprintf("Size: %d\n", s.Size()))
 	builder.WriteString("Items:\n")
 
-	for i, cpe := range s.Items {
+	// 获取所有CPE的有序列表
+	cpes := s.ToSlice()
+	// 按URI排序以保持一致的输出
+	sort.Slice(cpes, func(i, j int) bool {
+		return cpes[i].Cpe23 < cpes[j].Cpe23
+	})
+
+	for i, cpe := range cpes {
 		builder.WriteString(fmt.Sprintf("%d. %s\n", i+1, cpe.Cpe23))
 	}
 
