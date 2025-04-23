@@ -30,17 +30,13 @@ func main() {
 
 	// 在真实场景中，我们会使用NVD API密钥
 	// 这里我们只是创建一个简单的数据源
-	nvdDataSource := &cpe.DataSource{
-		Type:        "nvd",
-		Name:        "NVD CPE Dictionary",
-		Description: "National Vulnerability Database CPE Dictionary",
-		URL:         "https://nvd.nist.gov/feeds/json/cpematch/1.0/nvdcpematch-1.0.json.gz",
-		CacheSettings: &cpe.CacheSettings{
-			Enabled:     true,
-			Directory:   tempDir,
-			ExpiryHours: 24,
-		},
-	}
+	nvdDataSource := cpe.CreateNVDDataSource("")
+	// 配置缓存
+	nvdDataSource.SetCacheSettings(&cpe.CacheSettings{
+		Enabled:     true,
+		Directory:   tempDir,
+		ExpiryHours: 24,
+	})
 
 	// 显示数据源信息
 	fmt.Printf("NVD数据源: %s\n", nvdDataSource.Name)
