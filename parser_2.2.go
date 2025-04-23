@@ -141,7 +141,50 @@ func ParseCpe22(cpe22 string) (*CPE, error) {
 	return cpe, nil
 }
 
-// FormatCpe22 将CPE对象格式化为CPE 2.2字符串
+/**
+ * FormatCpe22 将CPE对象格式化为CPE 2.2字符串
+ *
+ * 根据CPE结构体的内容生成符合CPE 2.2标准格式的字符串表示。
+ * 支持生成基本格式和扩展格式（带波浪线分隔的附加字段）。
+ *
+ * @param cpe *CPE CPE结构体指针，包含要格式化的CPE信息，不能为nil
+ * @return string 符合CPE 2.2标准的格式化字符串
+ *
+ * 注意事项：
+ *   - 如果输入为nil，返回空字符串
+ *   - 线程安全：此函数不修改输入参数，可并发调用
+ *   - 性能考虑：字段值中特殊字符的转义会增加少量处理开销
+ *   - 格式细节：空字段会被替换为"*"，特殊字符会被转义
+ *
+ * 示例:
+ *   ```go
+ *   // 创建并格式化基本CPE
+ *   cpe := &cpe.CPE{
+ *       Part:        *cpe.PartApplication,
+ *       Vendor:      cpe.Vendor("apache"),
+ *       ProductName: cpe.Product("tomcat"),
+ *       Version:     cpe.Version("8.5.0"),
+ *   }
+ *   cpe22String := cpe.FormatCpe22(cpe)
+ *   fmt.Println(cpe22String)
+ *   // 输出: cpe:/a:apache:tomcat:8.5.0
+ *
+ *   // 创建并格式化带扩展字段的CPE
+ *   cpe := &cpe.CPE{
+ *       Part:           *cpe.PartApplication,
+ *       Vendor:         cpe.Vendor("mysql"),
+ *       ProductName:    cpe.Product("mysql"),
+ *       Version:        cpe.Version("5.7.12"),
+ *       SoftwareEdition: "enterprise",
+ *   }
+ *   cpe22String := cpe.FormatCpe22(cpe)
+ *   fmt.Println(cpe22String)
+ *   // 输出: cpe:/a:mysql:mysql:5.7.12:::~~~enterprise~~~
+ *   ```
+ *
+ * @see ParseCpe22 用于解析CPE 2.2字符串为CPE结构体
+ * @see escapeCpe22Value 用于转义CPE 2.2中的特殊字符
+ */
 func FormatCpe22(cpe *CPE) string {
 	if cpe == nil {
 		return ""
@@ -254,7 +297,41 @@ func FormatCpe22(cpe *CPE) string {
 	return strings.Join(parts, "")
 }
 
-// convertCpe22ToCpe23 将CPE 2.2格式转换为CPE 2.3格式
+/**
+ * convertCpe22ToCpe23 将CPE 2.2格式转换为CPE 2.3格式
+ *
+ * 此函数实现了CPE 2.2格式字符串到CPE 2.3格式字符串的转换，按照官方标准进行映射。
+ * 处理了基本格式和扩展格式（带波浪线的格式）的转换，转义和反转义特殊字符。
+ *
+ * @param cpe22 string CPE 2.2格式的字符串，以"cpe:/"开头
+ * @return string 转换后的CPE 2.3格式字符串，如果输入无效则返回空字符串
+ *
+ * 注意事项：
+ *   - 如果输入格式不正确（不以"cpe:/"开头），返回空字符串
+ *   - 函数会自动处理各个字段的转义和反转义
+ *   - 转换遵循官方CPE规范中定义的2.2到2.3的映射规则
+ *
+ * 示例:
+ *   ```go
+ *   // 基本格式转换
+ *   cpe23 := cpe.convertCpe22ToCpe23("cpe:/a:apache:tomcat:8.5.0")
+ *   fmt.Println(cpe23)
+ *   // 输出: cpe:2.3:a:apache:tomcat:8.5.0:*:*:*:*:*:*:*
+ *
+ *   // 扩展格式转换
+ *   cpe23 := cpe.convertCpe22ToCpe23("cpe:/a:mysql:mysql:5.7.12:::~~~enterprise~")
+ *   fmt.Println(cpe23)
+ *   // 输出: cpe:2.3:a:mysql:mysql:5.7.12:*:*:*:enterprise:*:*:*
+ *
+ *   // 带特殊字符的转换
+ *   cpe23 := cpe.convertCpe22ToCpe23("cpe:/a:some\\.vendor:product\\/name:1\\.0")
+ *   fmt.Println(cpe23)
+ *   // 输出: cpe:2.3:a:some\.vendor:product\/name:1\.0:*:*:*:*:*:*:*
+ *   ```
+ *
+ * @see ParseCpe22 用于解析CPE 2.2字符串为CPE结构体
+ * @see FormatCpe23 用于生成CPE 2.3格式字符串
+ */
 func convertCpe22ToCpe23(cpe22 string) string {
 	// 检查输入
 	if !strings.HasPrefix(cpe22, "cpe:/") {
@@ -404,7 +481,45 @@ func convertCpe22ToCpe23(cpe22 string) string {
 	return strings.Join(cpe23Parts, ":")
 }
 
-// escapeCpe22Value 对CPE 2.2格式的值进行转义
+/**
+ * escapeCpe22Value 对CPE 2.2格式的值进行转义
+ *
+ * 将字符串中的特殊字符按照CPE 2.2规范进行转义，以便在CPE 2.2格式字符串中正确表示。
+ * 特殊字符包括冒号(:)、斜杠(/)、波浪线(~)和点(.)，但版本号字段中的点不进行转义。
+ *
+ * @param value string 需要转义的原始字符串
+ * @return string 转义后的字符串
+ *
+ * 转义规则：
+ *   - 反斜杠(\)转义为\\
+ *   - 冒号(:)转义为%3a
+ *   - 斜杠(/)转义为%2f
+ *   - 波浪线(~)转义为%7e
+ *   - 点(.)转义为%2e（仅在非版本字段中）
+ *   - "*"和"-"等特殊值不进行转义
+ *
+ * 注意事项：
+ *   - 如果value是特殊通配符("*"或"-")或空字符串，则直接返回
+ *   - 对于版本字段，会检测字符串格式判断是否为版本号（如1.2.3格式），版本号中的点不会被转义
+ *   - 线程安全：此函数不修改输入参数，可并发调用
+ *
+ * 示例:
+ *   ```go
+ *   // 基本转义
+ *   escaped := cpe.escapeCpe22Value("product:name")
+ *   fmt.Println(escaped) // 输出: product%3aname
+ *
+ *   // 版本字段中的点不转义
+ *   escaped := cpe.escapeCpe22Value("1.2.3")
+ *   fmt.Println(escaped) // 输出: 1.2.3 (不转义点)
+ *
+ *   // 多种特殊字符转义
+ *   escaped := cpe.escapeCpe22Value("name/with~special:chars.here")
+ *   fmt.Println(escaped) // 输出: name%2fwith%7especial%3achars%2ehere
+ *   ```
+ *
+ * @see unescapeCpe22Value 用于将转义后的CPE 2.2字符串还原
+ */
 func escapeCpe22Value(value string) string {
 	if value == "*" || value == "-" || value == "" {
 		return value
@@ -433,7 +548,44 @@ func escapeCpe22Value(value string) string {
 	return escaped
 }
 
-// unescapeCpe22Value 对CPE 2.2格式的值进行反转义
+/**
+ * unescapeCpe22Value 对CPE 2.2格式的值进行反转义
+ *
+ * 将CPE 2.2格式字符串中转义的特殊字符还原为普通字符。
+ * 处理包括%3a (冒号)、%2f (斜杠)、%7e (波浪线)、%2e (点)等转义序列。
+ *
+ * @param value string 包含转义字符的CPE 2.2字符串值
+ * @return string 反转义后的原始字符串
+ *
+ * 反转义规则：
+ *   - %3a 转换为 :
+ *   - %2f 转换为 /
+ *   - %7e 转换为 ~
+ *   - %2e 转换为 .
+ *   - \\\\ 转换为 \\
+ *   - "*"和"-"等特殊值不进行处理
+ *
+ * 注意事项：
+ *   - 如果value是特殊通配符("*"或"-")或空字符串，则直接返回
+ *   - 线程安全：此函数不修改输入参数，可并发调用
+ *
+ * 示例:
+ *   ```go
+ *   // 基本反转义
+ *   unescaped := cpe.unescapeCpe22Value("product%3aname")
+ *   fmt.Println(unescaped) // 输出: product:name
+ *
+ *   // 多种特殊字符反转义
+ *   unescaped := cpe.unescapeCpe22Value("name%2fwith%7especial%3achars%2ehere")
+ *   fmt.Println(unescaped) // 输出: name/with~special:chars.here
+ *
+ *   // 不包含转义字符的值
+ *   unescaped := cpe.unescapeCpe22Value("normal_text")
+ *   fmt.Println(unescaped) // 输出: normal_text (保持不变)
+ *   ```
+ *
+ * @see escapeCpe22Value 用于将字符串转义为CPE 2.2格式
+ */
 func unescapeCpe22Value(value string) string {
 	if value == "*" || value == "-" || value == "" {
 		return value

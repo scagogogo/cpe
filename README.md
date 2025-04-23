@@ -101,7 +101,7 @@ import (
 func main() {
     // 解析CPE 2.3字符串
     cpeObj, err := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
-    if err != nil {
+if err != nil {
         panic(err)
     }
     
@@ -749,7 +749,7 @@ func main() {
     
     log.Println("正在下载NVD数据...")
     nvdData, err := cpe.DownloadAllNVDData(options)
-    if err != nil {
+if err != nil {
         log.Fatalf("无法获取NVD数据: %v", err)
     }
     log.Println("NVD数据下载完成")
@@ -857,9 +857,9 @@ type AssetManager struct {
 
 // 创建资产管理器
 func NewAssetManager(storageDir string) (*AssetManager, error) {
-    // 初始化文件存储
+// 初始化文件存储
     storage, err := cpe.NewFileStorage(storageDir, true)
-    if err != nil {
+if err != nil {
         return nil, fmt.Errorf("初始化存储失败: %v", err)
     }
     
@@ -876,7 +876,7 @@ func NewAssetManager(storageDir string) (*AssetManager, error) {
 // 添加新资产
 func (am *AssetManager) AddAsset(cpeStr, assetType, location, owner, notes string) error {
     cpeObj, err := cpe.ParseCpe23(cpeStr)
-    if err != nil {
+if err != nil {
         return fmt.Errorf("解析CPE失败: %v", err)
     }
     
@@ -945,7 +945,7 @@ func (am *AssetManager) GenerateReport() {
 func main() {
     // 创建资产管理器
     assetManager, err := NewAssetManager("./asset-data")
-    if err != nil {
+if err != nil {
         log.Fatalf("创建资产管理器失败: %v", err)
     }
     
@@ -1032,7 +1032,7 @@ func NewCVEAnalyzer() (*CVEAnalyzer, error) {
     
     // 下载NVD数据
     nvdData, err := cpe.DownloadAllNVDData(options)
-    if err != nil {
+if err != nil {
         return nil, fmt.Errorf("下载NVD数据失败: %v", err)
     }
     
@@ -1163,7 +1163,7 @@ func printAnalysisResult(bulletin SecurityBulletin, result map[string]interface{
 func main() {
     // 初始化CVE分析器
     analyzer, err := NewCVEAnalyzer()
-    if err != nil {
+if err != nil {
         log.Fatalf("初始化CVE分析器失败: %v", err)
     }
     
@@ -1210,7 +1210,7 @@ func main() {
 ### 缓存管理
 
 * **合理设置缓存过期时间**：NVD和CPE数据量较大，合理设置缓存可以显著提高性能。
-  ```go
+```go
   options := cpe.DefaultNVDFeedOptions()
   options.CacheDir = "/app/cache"
   options.MaxAge = 24 * time.Hour // 数据每天更新一次
@@ -1239,15 +1239,15 @@ func main() {
 ### 查询优化
 
 * **使用精确查询**：在可能的情况下，使用更精确的查询条件减少结果集大小。
-  ```go
+```go
   // 不推荐
   criteria := &cpe.CPE{Vendor: "microsoft"}
   
   // 推荐
-  criteria := &cpe.CPE{
+criteria := &cpe.CPE{
       Vendor: "microsoft",
-      ProductName: "windows",
-  }
+    ProductName: "windows",
+}
   ```
 
 * **批量处理**：处理大量CPE数据时，使用批处理而非单个处理。
@@ -1287,7 +1287,7 @@ func main() {
   ```
 
 * **流式处理**：对于非常大的数据集，使用流式处理避免一次性加载全部内容。
-  ```go
+```go
   // 使用回调函数处理大量结果
   searchWithCallback := func(criteria *cpe.CPE, callback func(*cpe.CPE) bool) {
       // 搜索实现
@@ -1309,7 +1309,7 @@ func main() {
 ### 数据验证
 
 * **验证外部输入**：处理用户输入的CPE或CVE字符串时进行验证。
-  ```go
+```go
   // 验证CVE ID
   if !cpe.ValidateCVE(userInput) {
       return errors.New("无效的CVE ID")
@@ -1317,7 +1317,7 @@ func main() {
   
   // 验证CPE字符串
   _, err := cpe.ParseCpe23(userInput)
-  if err != nil {
+if err != nil {
       return fmt.Errorf("无效的CPE: %v", err)
   }
   ```
@@ -1333,8 +1333,8 @@ func main() {
 ### 错误处理
 
 * **详细记录错误**：记录详细的错误信息便于调试和审计。
-  ```go
-  if err != nil {
+```go
+if err != nil {
       log.Printf("解析CPE失败: %v, 输入: %s", err, input)
       return nil, err
   }
@@ -1371,7 +1371,7 @@ func main() {
 ### 与现有系统集成
 
 * **使用适配器模式**：创建适配器连接第三方系统。
-  ```go
+```go
   // CMDB适配器示例
   type CMDBAdapter struct {
       client CMDBClient
@@ -1402,7 +1402,7 @@ func main() {
 ### 分布式部署
 
 * **无状态设计**：设计组件时避免依赖共享状态。
-  ```go
+```go
   // 创建独立服务
   type CPEService struct {
       storage cpe.Storage
@@ -1416,7 +1416,7 @@ func main() {
       }
       
       cpe2, err := cpe.ParseCpe23(cpeStr2)
-      if err != nil {
+if err != nil {
           return false, err
       }
       
