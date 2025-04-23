@@ -255,7 +255,34 @@ func (c *CPE) GetURI() string {
 	return FormatURI(c)
 }
 
-// FormatURI 将CPE格式化为URI字符串
+/**
+ * FormatURI 将CPE对象格式化为标准的URI字符串表示
+ *
+ * 该函数根据CPE对象的各属性值，构建符合CPE 2.3规范的URI字符串。
+ * 如果CPE对象已经包含Cpe23字段值，则直接返回该值；否则基于各个属性重新构建URI。
+ *
+ * @param cpe 要格式化的CPE对象指针
+ * @return string 返回格式化后的CPE URI字符串，如果输入为nil则返回空字符串
+ *
+ * 示例:
+ *   ```go
+ *   // 创建一个新的CPE对象
+ *   windowsCPE := &cpe.CPE{
+ *       Part:        *cpe.PartApplication,
+ *       Vendor:      cpe.Vendor("microsoft"),
+ *       ProductName: cpe.Product("windows"),
+ *       Version:     cpe.Version("10"),
+ *       Update:      cpe.Update("*"),
+ *       Edition:     cpe.Edition("*"),
+ *       Language:    cpe.Language("*"),
+ *   }
+ *
+ *   // 获取格式化的URI
+ *   uri := cpe.FormatURI(windowsCPE)
+ *   fmt.Println(uri)
+ *   // 输出: cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*
+ *   ```
+ */
 func FormatURI(cpe *CPE) string {
 	if cpe == nil {
 		return ""
@@ -285,7 +312,42 @@ func FormatURI(cpe *CPE) string {
 	return strings.Join(parts, ":")
 }
 
-// MatchCPE 判断两个CPE是否匹配
+/**
+ * MatchCPE 判断criteria CPE是否匹配target CPE
+ *
+ * 根据提供的匹配选项判断两个CPE对象是否匹配。支持特殊匹配规则如忽略版本比较。
+ * 该函数扩展了基本的Match方法，增加了更多匹配控制选项。
+ *
+ * @param criteria 匹配条件CPE，通常包含通配符或部分属性
+ * @param target 目标CPE，通常是完整的具体CPE
+ * @param options 匹配选项，控制匹配行为的参数集合
+ * @return bool 如果匹配返回true，否则返回false
+ *
+ * 匹配规则:
+ *   1. 如果options.IgnoreVersion为true，则忽略版本比较
+ *   2. 对ProductName进行特殊处理，确保不会错误匹配不同产品
+ *   3. 其他属性按照标准CPE匹配规则比较
+ *
+ * 示例:
+ *   ```go
+ *   // 创建匹配条件和目标CPE
+ *   criteria, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:*:*:*:*:*:*:*:*")
+ *   target, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+ *
+ *   // 使用默认匹配选项
+ *   options := cpe.DefaultMatchOptions()
+ *   if cpe.MatchCPE(criteria, target, options) {
+ *       fmt.Println("CPE匹配成功")
+ *   }
+ *
+ *   // 忽略版本匹配
+ *   options.IgnoreVersion = true
+ *   windowsXP, _ := cpe.ParseCpe23("cpe:2.3:a:microsoft:windows:xp:*:*:*:*:*:*:*")
+ *   if cpe.MatchCPE(criteria, windowsXP, options) {
+ *       fmt.Println("忽略版本时匹配成功")
+ *   }
+ *   ```
+ */
 func MatchCPE(criteria *CPE, target *CPE, options *MatchOptions) bool {
 	if criteria == nil || target == nil {
 		return false

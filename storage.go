@@ -5,78 +5,270 @@ import (
 	"time"
 )
 
-// 存储接口定义的错误
+/**
+ * 存储接口定义的错误常量
+ * 这些错误常量用于存储操作中可能遇到的常见错误情况，
+ * 标准化了错误处理，便于使用者统一处理不同存储实现中的错误。
+ */
 var (
-	// ErrNotFound 表示记录不存在
+	// ErrNotFound 表示请求的记录在存储中不存在
 	ErrNotFound = errors.New("record not found")
 
-	// ErrDuplicate 表示记录已存在
+	// ErrDuplicate 表示尝试存储的记录已经存在（通常在主键冲突时）
 	ErrDuplicate = errors.New("duplicate record")
 
-	// ErrInvalidData 表示数据无效
+	// ErrInvalidData 表示提供的数据无效或不符合存储要求
 	ErrInvalidData = errors.New("invalid data")
 
-	// ErrStorageDisconnected 表示存储未连接
+	// ErrStorageDisconnected 表示存储后端未连接或连接已断开
 	ErrStorageDisconnected = errors.New("storage is disconnected")
 )
 
-// Storage 定义了CPE数据的存储接口
+/**
+ * Storage 定义了CPE和CVE数据的存储接口
+ *
+ * 该接口提供了一组统一的方法来存储、检索、更新和搜索CPE和CVE数据，
+ * 使得不同的存储实现（如文件存储、内存存储、数据库存储等）能够以一致的方式使用。
+ *
+ * 示例:
+ *   ```go
+ *   // 创建文件存储
+ *   storage, err := cpe.NewFileStorage("/path/to/storage", true)
+ *   if err != nil {
+ *       log.Fatalf("无法创建存储: %v", err)
+ *   }
+ *
+ *   // 初始化存储
+ *   if err := storage.Initialize(); err != nil {
+ *       log.Fatalf("初始化存储失败: %v", err)
+ *   }
+ *
+ *   // 存储CPE
+ *   windowsCPE := &cpe.CPE{
+ *       Cpe23:       "cpe:2.3:o:microsoft:windows:10:*:*:*:*:*:*:*",
+ *       Vendor:      cpe.Vendor("microsoft"),
+ *       ProductName: cpe.Product("windows"),
+ *       Version:     cpe.Version("10"),
+ *   }
+ *   if err := storage.StoreCPE(windowsCPE); err != nil {
+ *       log.Printf("存储CPE失败: %v", err)
+ *   }
+ *
+ *   // 检索CPE
+ *   retrievedCPE, err := storage.RetrieveCPE(windowsCPE.GetURI())
+ *   if err != nil {
+ *       if errors.Is(err, cpe.ErrNotFound) {
+ *           log.Println("CPE不存在")
+ *       } else {
+ *           log.Printf("检索CPE失败: %v", err)
+ *       }
+ *   }
+ *
+ *   // 使用完毕后关闭存储
+ *   defer storage.Close()
+ *   ```
+ */
 type Storage interface {
-	// Initialize 初始化存储
+	/**
+	 * Initialize 初始化存储
+	 *
+	 * 该方法用于执行存储系统所需的初始化操作，如创建目录、建立连接、初始化表结构等。
+	 * 在使用存储系统前应首先调用此方法。
+	 *
+	 * @return error 初始化过程中发生的错误，成功则返回nil
+	 */
 	Initialize() error
 
-	// Close 关闭存储连接
+	/**
+	 * Close 关闭存储连接
+	 *
+	 * 关闭与存储系统的连接，释放相关资源。使用完存储后应调用此方法。
+	 *
+	 * @return error 关闭过程中发生的错误，成功则返回nil
+	 */
 	Close() error
 
-	// StoreCPE 存储单个CPE
+	/**
+	 * StoreCPE 存储单个CPE对象
+	 *
+	 * 将CPE对象持久化到存储系统中。如果存储中已存在相同ID的CPE，
+	 * 具体行为取决于实现（可能返回错误或覆盖现有记录）。
+	 *
+	 * @param cpe *CPE 要存储的CPE对象
+	 * @return error 存储过程中发生的错误，成功则返回nil
+	 */
 	StoreCPE(cpe *CPE) error
 
-	// RetrieveCPE 根据ID检索CPE
+	/**
+	 * RetrieveCPE 根据ID检索CPE
+	 *
+	 * 从存储中检索指定ID的CPE对象。通常ID是CPE的URI表示形式。
+	 *
+	 * @param id string CPE的唯一标识符
+	 * @return *CPE 检索到的CPE对象
+	 * @return error 检索过程中发生的错误，如果未找到则返回ErrNotFound
+	 */
 	RetrieveCPE(id string) (*CPE, error)
 
-	// UpdateCPE 更新CPE
+	/**
+	 * UpdateCPE 更新CPE
+	 *
+	 * 更新存储中已存在的CPE对象。如果指定ID的CPE不存在，则返回错误。
+	 *
+	 * @param cpe *CPE 包含更新信息的CPE对象
+	 * @return error 更新过程中发生的错误，成功则返回nil
+	 */
 	UpdateCPE(cpe *CPE) error
 
-	// DeleteCPE 删除CPE
+	/**
+	 * DeleteCPE 删除CPE
+	 *
+	 * 从存储中删除指定ID的CPE对象。
+	 *
+	 * @param id string 要删除的CPE的唯一标识符
+	 * @return error 删除过程中发生的错误，成功则返回nil
+	 */
 	DeleteCPE(id string) error
 
-	// SearchCPE 搜索CPE
+	/**
+	 * SearchCPE 搜索CPE
+	 *
+	 * 根据给定的条件和选项搜索匹配的CPE对象。
+	 *
+	 * @param criteria *CPE 搜索条件，包含要匹配的CPE属性
+	 * @param options *MatchOptions 匹配选项，控制匹配行为
+	 * @return []*CPE 匹配的CPE对象列表
+	 * @return error 搜索过程中发生的错误，成功则返回nil
+	 */
 	SearchCPE(criteria *CPE, options *MatchOptions) ([]*CPE, error)
 
-	// AdvancedSearchCPE 高级搜索CPE
+	/**
+	 * AdvancedSearchCPE 高级搜索CPE
+	 *
+	 * 使用高级匹配选项搜索CPE对象，支持更复杂的匹配条件。
+	 *
+	 * @param criteria *CPE 搜索条件
+	 * @param options *AdvancedMatchOptions 高级匹配选项
+	 * @return []*CPE 匹配的CPE对象列表
+	 * @return error 搜索过程中发生的错误，成功则返回nil
+	 */
 	AdvancedSearchCPE(criteria *CPE, options *AdvancedMatchOptions) ([]*CPE, error)
 
-	// StoreCVE 存储CVE信息
+	/**
+	 * StoreCVE 存储CVE信息
+	 *
+	 * 将CVE引用对象持久化到存储系统中。
+	 *
+	 * @param cve *CVEReference 要存储的CVE引用对象
+	 * @return error 存储过程中发生的错误，成功则返回nil
+	 */
 	StoreCVE(cve *CVEReference) error
 
-	// RetrieveCVE 根据CVE ID检索CVE信息
+	/**
+	 * RetrieveCVE 根据CVE ID检索CVE信息
+	 *
+	 * 从存储中检索指定ID的CVE引用对象。
+	 *
+	 * @param cveID string CVE的唯一标识符，如"CVE-2021-44228"
+	 * @return *CVEReference 检索到的CVE引用对象
+	 * @return error 检索过程中发生的错误，如果未找到则返回ErrNotFound
+	 */
 	RetrieveCVE(cveID string) (*CVEReference, error)
 
-	// UpdateCVE 更新CVE信息
+	/**
+	 * UpdateCVE 更新CVE信息
+	 *
+	 * 更新存储中已存在的CVE引用对象。
+	 *
+	 * @param cve *CVEReference 包含更新信息的CVE引用对象
+	 * @return error 更新过程中发生的错误，成功则返回nil
+	 */
 	UpdateCVE(cve *CVEReference) error
 
-	// DeleteCVE 删除CVE信息
+	/**
+	 * DeleteCVE 删除CVE信息
+	 *
+	 * 从存储中删除指定ID的CVE引用对象。
+	 *
+	 * @param cveID string 要删除的CVE的唯一标识符
+	 * @return error 删除过程中发生的错误，成功则返回nil
+	 */
 	DeleteCVE(cveID string) error
 
-	// SearchCVE 搜索CVE
+	/**
+	 * SearchCVE 搜索CVE
+	 *
+	 * 根据查询字符串和搜索选项搜索匹配的CVE引用对象。
+	 *
+	 * @param query string 搜索查询字符串
+	 * @param options *SearchOptions 搜索选项
+	 * @return []*CVEReference 匹配的CVE引用对象列表
+	 * @return error 搜索过程中发生的错误，成功则返回nil
+	 */
 	SearchCVE(query string, options *SearchOptions) ([]*CVEReference, error)
 
-	// FindCVEsByCPE 查找与CPE关联的CVE
+	/**
+	 * FindCVEsByCPE 查找与CPE关联的CVE
+	 *
+	 * 查找影响指定CPE的所有CVE引用对象。
+	 *
+	 * @param cpe *CPE 目标CPE对象
+	 * @return []*CVEReference 与指定CPE关联的CVE引用对象列表
+	 * @return error 查找过程中发生的错误，成功则返回nil
+	 */
 	FindCVEsByCPE(cpe *CPE) ([]*CVEReference, error)
 
-	// FindCPEsByCVE 查找与CVE关联的CPE
+	/**
+	 * FindCPEsByCVE 查找与CVE关联的CPE
+	 *
+	 * 查找受指定CVE影响的所有CPE对象。
+	 *
+	 * @param cveID string CVE的唯一标识符
+	 * @return []*CPE 与指定CVE关联的CPE对象列表
+	 * @return error 查找过程中发生的错误，成功则返回nil
+	 */
 	FindCPEsByCVE(cveID string) ([]*CPE, error)
 
-	// StoreDictionary 存储CPE字典
+	/**
+	 * StoreDictionary 存储CPE字典
+	 *
+	 * 将CPE字典对象持久化到存储系统中。
+	 *
+	 * @param dict *CPEDictionary 要存储的CPE字典对象
+	 * @return error 存储过程中发生的错误，成功则返回nil
+	 */
 	StoreDictionary(dict *CPEDictionary) error
 
-	// RetrieveDictionary 检索CPE字典
+	/**
+	 * RetrieveDictionary 检索CPE字典
+	 *
+	 * 从存储中检索CPE字典对象。
+	 *
+	 * @return *CPEDictionary 检索到的CPE字典对象
+	 * @return error 检索过程中发生的错误，如果未找到则返回ErrNotFound
+	 */
 	RetrieveDictionary() (*CPEDictionary, error)
 
-	// StoreModificationTimestamp 存储最后修改时间
+	/**
+	 * StoreModificationTimestamp 存储最后修改时间
+	 *
+	 * 记录特定键的最后修改时间戳，用于跟踪数据更新。
+	 *
+	 * @param key string 时间戳的键
+	 * @param timestamp time.Time 时间戳值
+	 * @return error 存储过程中发生的错误，成功则返回nil
+	 */
 	StoreModificationTimestamp(key string, timestamp time.Time) error
 
-	// RetrieveModificationTimestamp 检索最后修改时间
+	/**
+	 * RetrieveModificationTimestamp 检索最后修改时间
+	 *
+	 * 检索特定键的最后修改时间戳。
+	 *
+	 * @param key string 时间戳的键
+	 * @return time.Time 检索到的时间戳
+	 * @return error 检索过程中发生的错误，如果未找到则返回ErrNotFound
+	 */
 	RetrieveModificationTimestamp(key string) (time.Time, error)
 }
 
