@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/scagogogo/versions"
 )
 
 /**
@@ -595,8 +597,9 @@ func (s *cpeSorter) Less(i, j int) bool {
 		result = string(s.cpes[i].ProductName) < string(s.cpes[j].ProductName)
 	case "version":
 		// 使用版本比较函数
-		compareResult := compareVersionsSimple(string(s.cpes[i].Version), string(s.cpes[j].Version))
-		result = compareResult < 0
+		v1 := versions.NewVersion(string(s.cpes[i].Version))
+		v2 := versions.NewVersion(string(s.cpes[j].Version))
+		result = v1.CompareTo(v2) < 0
 	default:
 		// 默认按照Cpe23排序
 		result = s.cpes[i].Cpe23 < s.cpes[j].Cpe23

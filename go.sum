@@ -1,2 +1,12 @@
+github.com/golang-infrastructure/go-compare-anything v0.0.2-0.20230108071748-35501d697475 h1:uzE5mG0WVAfjwRyZdO8ccVXIxC53JC+t+TthU8Vd4bs=
+github.com/golang-infrastructure/go-compare-anything v0.0.2-0.20230108071748-35501d697475/go.mod h1:CtyKakUDiX9wgDm6OXrN9K9NnBa6GuwG880fexW9YMs=
+github.com/golang-infrastructure/go-gtypes v0.0.1 h1:hnM1OYSwLPLGkZ4C6ecAxgmAUaPTjnhnUtRNmJj4p6c=
+github.com/golang-infrastructure/go-gtypes v0.0.1/go.mod h1:vFMCxFzxdMInvTtgLZRlWI1rS+mui88sMbL5I+zu1hg=
+github.com/golang-infrastructure/go-reflect-utils v0.0.0-20221130143747-965ef2eb09c3 h1:jJ7AdpNdLQudsx1hiXY9iwmauHARV4/UB52KnBh9Se0=
+github.com/golang-infrastructure/go-reflect-utils v0.0.0-20221130143747-965ef2eb09c3/go.mod h1:zqXYxqOBa1mL2ilBK6PuH/Wb/Iego7en6XhiKWdZQHI=
+github.com/golang-infrastructure/go-tuple v0.0.0-20221215155811-4ed54fe7d579 h1:pQV2/ichhyLoR3aJSNXByuxtdPM2y229Rq5x9DGl5OU=
+github.com/golang-infrastructure/go-tuple v0.0.0-20221215155811-4ed54fe7d579/go.mod h1:cn8fHK0Sjxh7nSrnNpRa9wi1wIsmBLsjOip4LTjQz+Q=
 github.com/scagogogo/cve v0.0.0-20250422092617-5a9328ab779d h1:k8DksSzsdoEB2bBolR/jvWzBgKnBIEAyXzyakcIhlr8=
 github.com/scagogogo/cve v0.0.0-20250422092617-5a9328ab779d/go.mod h1:80nkWVlNN3nM/jLr4iUXTMHeq/PDG0DMUmWC+Cbjve4=
+github.com/scagogogo/versions v0.0.0-20250422092806-1fd2178f0505 h1:kDxP24V75CB5U0jQ3o1wGZZXdXVo3e+Hj+QHaebwaM0=
+github.com/scagogogo/versions v0.0.0-20250422092806-1fd2178f0505/go.mod h1:lcOJYJKz5nKTq+Y8pxo3SSqXALlpLTZW8J2p2N4f8RA=

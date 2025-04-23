@@ -2,6 +2,8 @@ package cpe
 
 import (
 	"testing"
+
+	"github.com/scagogogo/versions"
 )
 
 // TestCPEMatch 测试CPE匹配功能
@@ -421,7 +423,7 @@ func TestDefaultMatchOptions(t *testing.T) {
 
 // TestCompareVersionsString 测试版本比较功能
 func TestCompareVersionsString(t *testing.T) {
-	// 测试 compareVersionStrings 函数功能
+	// 测试使用versions库的版本比较功能
 	testCases := []struct {
 		name     string
 		v1       string
@@ -445,9 +447,12 @@ func TestCompareVersionsString(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := compareVersionStrings(tc.v1, tc.v2)
+			// 使用versions库的Version.CompareTo方法
+			v1 := versions.NewVersion(tc.v1)
+			v2 := versions.NewVersion(tc.v2)
+			result := v1.CompareTo(v2)
 			if result != tc.expected {
-				t.Errorf("compareVersionStrings(%q, %q) = %d, 期望 %d", tc.v1, tc.v2, result, tc.expected)
+				t.Errorf("版本比较(%q, %q) = %d, 期望 %d", tc.v1, tc.v2, result, tc.expected)
 			}
 		})
 	}

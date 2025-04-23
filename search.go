@@ -2,8 +2,9 @@ package cpe
 
 import (
 	"regexp"
-	"strconv"
 	"strings"
+
+	"github.com/scagogogo/versions"
 )
 
 // MatchOptions 匹配选项
@@ -90,13 +91,17 @@ func matchCPE(cpe, criteria *CPE, options *MatchOptions) bool {
 		if options.VersionRange {
 			// 版本范围匹配
 			if options.MinVersion != "" {
-				if compareVersionsSimple(string(cpe.Version), options.MinVersion) < 0 {
+				cpeVersion := versions.NewVersion(string(cpe.Version))
+				minVersion := versions.NewVersion(options.MinVersion)
+				if cpeVersion.CompareTo(minVersion) < 0 {
 					return false
 				}
 			}
 
 			if options.MaxVersion != "" {
-				if compareVersionsSimple(string(cpe.Version), options.MaxVersion) > 0 {
+				cpeVersion := versions.NewVersion(string(cpe.Version))
+				maxVersion := versions.NewVersion(options.MaxVersion)
+				if cpeVersion.CompareTo(maxVersion) > 0 {
 					return false
 				}
 			}
@@ -124,63 +129,6 @@ func matchCPE(cpe, criteria *CPE, options *MatchOptions) bool {
 	}
 
 	return true
-}
-
-// compareVersions 比较两个版本号
-// 返回: -1 (v1 < v2), 0 (v1 == v2), 1 (v1 > v2)
-func compareVersionsSimple(v1, v2 string) int {
-	// 处理特殊情况
-	if v1 == v2 {
-		return 0
-	}
-	if v1 == "*" || v2 == "*" {
-		return 0
-	}
-	if v1 == "" {
-		return -1
-	}
-	if v2 == "" {
-		return 1
-	}
-
-	// 分割版本号为数字部分
-	parts1 := strings.Split(v1, ".")
-	parts2 := strings.Split(v2, ".")
-
-	// 比较每一部分
-	for i := 0; i < len(parts1) && i < len(parts2); i++ {
-		// 尝试将部分转换为数字
-		num1, err1 := strconv.Atoi(parts1[i])
-		num2, err2 := strconv.Atoi(parts2[i])
-
-		if err1 == nil && err2 == nil {
-			// 两部分都是数字，直接比较
-			if num1 < num2 {
-				return -1
-			}
-			if num1 > num2 {
-				return 1
-			}
-		} else {
-			// 至少有一部分不是数字，按字符串比较
-			if parts1[i] < parts2[i] {
-				return -1
-			}
-			if parts1[i] > parts2[i] {
-				return 1
-			}
-		}
-	}
-
-	// 如果前面的部分都相等，较长的版本号较大
-	if len(parts1) < len(parts2) {
-		return -1
-	}
-	if len(parts1) > len(parts2) {
-		return 1
-	}
-
-	return 0
 }
 
 // FindVulnerableCPEs 查找可能受特定漏洞影响的CPE

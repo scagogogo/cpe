@@ -1,9 +1,10 @@
 package cpe
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/scagogogo/versions"
 )
 
 // AdvancedMatchOptions 定义了高级匹配选项
@@ -468,116 +469,43 @@ func compareVersions(criteria *CPE, target *CPE, options *AdvancedMatchOptions) 
 		return matchField(criteriaVersion, targetVersion, options)
 	}
 
+	// 解析版本为Version对象
+	criteriaVer := versions.NewVersion(criteriaVersion)
+	targetVer := versions.NewVersion(targetVersion)
+
 	// 根据版本比较模式执行比较
 	switch options.VersionCompareMode {
 	case "greater":
 		// target版本必须大于criteria版本
-		return compareVersionStrings(targetVersion, criteriaVersion) > 0
+		return targetVer.CompareTo(criteriaVer) > 0
 	case "greaterOrEqual":
 		// target版本必须大于等于criteria版本
-		return compareVersionStrings(targetVersion, criteriaVersion) >= 0
+		return targetVer.CompareTo(criteriaVer) >= 0
 	case "less":
 		// target版本必须小于criteria版本
-		return compareVersionStrings(targetVersion, criteriaVersion) < 0
+		return targetVer.CompareTo(criteriaVer) < 0
 	case "lessOrEqual":
 		// target版本必须小于等于criteria版本
-		return compareVersionStrings(targetVersion, criteriaVersion) <= 0
+		return targetVer.CompareTo(criteriaVer) <= 0
 	case "range":
 		// 版本必须在指定范围内
-		if options.VersionLower != "" && compareVersionStrings(targetVersion, options.VersionLower) < 0 {
-			return false
+		if options.VersionLower != "" {
+			lowerVer := versions.NewVersion(options.VersionLower)
+			if targetVer.CompareTo(lowerVer) < 0 {
+				return false
+			}
 		}
-		if options.VersionUpper != "" && compareVersionStrings(targetVersion, options.VersionUpper) > 0 {
-			return false
+		if options.VersionUpper != "" {
+			upperVer := versions.NewVersion(options.VersionUpper)
+			if targetVer.CompareTo(upperVer) > 0 {
+				return false
+			}
 		}
 		return true
 	default:
 		// 默认使用精确匹配
 		return criteriaVersion == targetVersion
 	}
-}
-
-// compareVersionStrings 比较两个版本字符串
-// 返回值: -1 表示 v1 < v2, 0 表示 v1 == v2, 1 表示 v1 > v2
-func compareVersionStrings(v1, v2 string) int {
-	// 分割版本号
-	parts1 := splitVersion(v1)
-	parts2 := splitVersion(v2)
-
-	// 逐部分比较
-	for i := 0; i < len(parts1) && i < len(parts2); i++ {
-		p1 := parts1[i]
-		p2 := parts2[i]
-
-		// 比较数字部分
-		if isNumeric(p1) && isNumeric(p2) {
-			n1, _ := parseInt(p1)
-			n2, _ := parseInt(p2)
-			if n1 < n2 {
-				return -1
-			}
-			if n1 > n2 {
-				return 1
-			}
-			continue
-		}
-
-		// 比较字符串部分
-		if p1 < p2 {
-			return -1
-		}
-		if p1 > p2 {
-			return 1
-		}
-	}
-
-	// 处理不同长度的版本号
-	if len(parts1) < len(parts2) {
-		return -1
-	}
-	if len(parts1) > len(parts2) {
-		return 1
-	}
-
-	// 版本号相等
-	return 0
-}
-
-// splitVersion 将版本字符串分割为组件
-func splitVersion(version string) []string {
-	// 通过常见分隔符分割
-	re := regexp.MustCompile(`[\.\-_]`)
-	parts := re.Split(version, -1)
-
-	var result []string
-
-	// 将字母数字混合的部分进一步分割
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-
-		// 分离字母和数字
-		re := regexp.MustCompile(`(\d+)|([a-zA-Z]+)`)
-		matches := re.FindAllString(part, -1)
-
-		result = append(result, matches...)
-	}
-
-	return result
-}
-
-// isNumeric 检查字符串是否为数字
-func isNumeric(s string) bool {
-	_, err := parseInt(s)
-	return err == nil
-}
-
-// parseInt 将字符串解析为整数
-func parseInt(s string) (int, error) {
-	var result int
-	_, err := fmt.Sscanf(s, "%d", &result)
-	return result, err
 }
 
 // matchSubset 检查target是否是criteria的子集

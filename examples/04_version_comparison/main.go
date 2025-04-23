@@ -3,68 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/scagogogo/cpe"
+	"github.com/scagogogo/versions"
 )
-
-// compareVersions 实现一个与库内部功能相似的版本比较函数
-// 返回: -1 (v1 < v2), 0 (v1 == v2), 1 (v1 > v2)
-func compareVersions(v1, v2 string) int {
-	// 处理特殊情况
-	if v1 == v2 {
-		return 0
-	}
-	if v1 == "*" || v2 == "*" {
-		return 0
-	}
-	if v1 == "" {
-		return -1
-	}
-	if v2 == "" {
-		return 1
-	}
-
-	// 分割版本号为数字部分
-	parts1 := strings.Split(v1, ".")
-	parts2 := strings.Split(v2, ".")
-
-	// 比较每一部分
-	for i := 0; i < len(parts1) && i < len(parts2); i++ {
-		// 尝试将部分转换为数字
-		num1, err1 := strconv.Atoi(parts1[i])
-		num2, err2 := strconv.Atoi(parts2[i])
-
-		if err1 == nil && err2 == nil {
-			// 两部分都是数字，直接比较
-			if num1 < num2 {
-				return -1
-			}
-			if num1 > num2 {
-				return 1
-			}
-		} else {
-			// 至少有一部分不是数字，按字符串比较
-			if parts1[i] < parts2[i] {
-				return -1
-			}
-			if parts1[i] > parts2[i] {
-				return 1
-			}
-		}
-	}
-
-	// 如果前面的部分都相等，较长的版本号较大
-	if len(parts1) < len(parts2) {
-		return -1
-	}
-	if len(parts1) > len(parts2) {
-		return 1
-	}
-
-	return 0
-}
 
 func main() {
 	// 版本比较是CPE库中的重要功能
@@ -74,15 +16,19 @@ func main() {
 	fmt.Println("========= 基本版本比较 =========")
 
 	// 比较不同格式的版本号
-	v1 := "1.0.0"
-	v2 := "2.0.0"
-	v3 := "1.0.5"
+	v1Str := "1.0.0"
+	v2Str := "2.0.0"
+	v3Str := "1.0.5"
 
-	// 使用我们实现的compareVersions函数比较版本
+	// 使用versions库比较版本
 	// 返回值: -1 (v1 < v2), 0 (v1 == v2), 1 (v1 > v2)
-	fmt.Printf("比较 %s 和 %s: %d\n", v1, v2, compareVersions(v1, v2))
-	fmt.Printf("比较 %s 和 %s: %d\n", v2, v1, compareVersions(v2, v1))
-	fmt.Printf("比较 %s 和 %s: %d\n", v1, v3, compareVersions(v1, v3))
+	v1 := versions.NewVersion(v1Str)
+	v2 := versions.NewVersion(v2Str)
+	v3 := versions.NewVersion(v3Str)
+
+	fmt.Printf("比较 %s 和 %s: %d\n", v1Str, v2Str, v1.CompareTo(v2))
+	fmt.Printf("比较 %s 和 %s: %d\n", v2Str, v1Str, v2.CompareTo(v1))
+	fmt.Printf("比较 %s 和 %s: %d\n", v1Str, v3Str, v1.CompareTo(v3))
 
 	/*
 		输出示例:
@@ -96,33 +42,38 @@ func main() {
 	fmt.Println("\n========= 版本相等性比较 =========")
 
 	// 比较相同版本
-	v4 := "1.0.0"
-	v5 := "1.0.0"
-	fmt.Printf("比较 %s 和 %s: %d\n", v4, v5, compareVersions(v4, v5))
+	v4Str := "1.0.0"
+	v5Str := "1.0.0"
+	v4 := versions.NewVersion(v4Str)
+	v5 := versions.NewVersion(v5Str)
+	fmt.Printf("比较 %s 和 %s: %d\n", v4Str, v5Str, v4.CompareTo(v5))
 
-	// 比较通配符版本
-	v6 := "*"
-	fmt.Printf("比较 %s 和 %s: %d\n", v1, v6, compareVersions(v1, v6))
-	fmt.Printf("比较 %s 和 %s: %d\n", v6, v2, compareVersions(v6, v2))
+	// 比较通配符版本（versions库可能不直接支持"*"通配符，需要特殊处理）
+	v6Str := "*"
+	fmt.Printf("比较 %s 和 %s: 特殊情况，被视为相等\n", v1Str, v6Str)
+	fmt.Printf("比较 %s 和 %s: 特殊情况，被视为相等\n", v6Str, v2Str)
 
 	/*
 		输出示例:
 		========= 版本相等性比较 =========
 		比较 1.0.0 和 1.0.0: 0
-		比较 1.0.0 和 *: 0
-		比较 * 和 2.0.0: 0
+		比较 1.0.0 和 *: 特殊情况，被视为相等
+		比较 * 和 2.0.0: 特殊情况，被视为相等
 	*/
 
 	// 示例3: 比较不同长度的版本号
 	fmt.Println("\n========= 比较不同长度的版本号 =========")
 
-	vA := "1.0"
-	vB := "1.0.0"
-	vC := "1.0.1"
+	vAStr := "1.0"
+	vBStr := "1.0.0"
+	vCStr := "1.0.1"
+	vA := versions.NewVersion(vAStr)
+	vB := versions.NewVersion(vBStr)
+	vC := versions.NewVersion(vCStr)
 
-	fmt.Printf("比较 %s 和 %s: %d\n", vA, vB, compareVersions(vA, vB))
-	fmt.Printf("比较 %s 和 %s: %d\n", vB, vA, compareVersions(vB, vA))
-	fmt.Printf("比较 %s 和 %s: %d\n", vA, vC, compareVersions(vA, vC))
+	fmt.Printf("比较 %s 和 %s: %d\n", vAStr, vBStr, vA.CompareTo(vB))
+	fmt.Printf("比较 %s 和 %s: %d\n", vBStr, vAStr, vB.CompareTo(vA))
+	fmt.Printf("比较 %s 和 %s: %d\n", vAStr, vCStr, vA.CompareTo(vC))
 
 	/*
 		输出示例:
@@ -135,14 +86,18 @@ func main() {
 	// 示例4: 比较包含字母的版本号
 	fmt.Println("\n========= 比较包含字母的版本号 =========")
 
-	vAlpha := "1.0-alpha"
-	vBeta := "1.0-beta"
-	vRC := "1.0-rc"
-	vFinal := "1.0"
+	vAlphaStr := "1.0-alpha"
+	vBetaStr := "1.0-beta"
+	vRCStr := "1.0-rc"
+	vFinalStr := "1.0"
+	vAlpha := versions.NewVersion(vAlphaStr)
+	vBeta := versions.NewVersion(vBetaStr)
+	vRC := versions.NewVersion(vRCStr)
+	vFinal := versions.NewVersion(vFinalStr)
 
-	fmt.Printf("比较 %s 和 %s: %d\n", vAlpha, vBeta, compareVersions(vAlpha, vBeta))
-	fmt.Printf("比较 %s 和 %s: %d\n", vBeta, vRC, compareVersions(vBeta, vRC))
-	fmt.Printf("比较 %s 和 %s: %d\n", vRC, vFinal, compareVersions(vRC, vFinal))
+	fmt.Printf("比较 %s 和 %s: %d\n", vAlphaStr, vBetaStr, vAlpha.CompareTo(vBeta))
+	fmt.Printf("比较 %s 和 %s: %d\n", vBetaStr, vRCStr, vBeta.CompareTo(vRC))
+	fmt.Printf("比较 %s 和 %s: %d\n", vRCStr, vFinalStr, vRC.CompareTo(vFinal))
 
 	/*
 		输出示例:
@@ -216,4 +171,33 @@ func main() {
 		CPE1在新版本范围内: true
 		CPE2在新版本范围内: false
 	*/
+
+	// 示例7: 使用versions库的高级功能
+	fmt.Println("\n========= versions库的高级功能 =========")
+
+	// 版本分组
+	versionList := []*versions.Version{
+		versions.NewVersion("1.0.0"),
+		versions.NewVersion("1.1.0"),
+		versions.NewVersion("1.2.0"),
+		versions.NewVersion("2.0.0"),
+		versions.NewVersion("2.1.0"),
+		versions.NewVersion("3.0.0-beta"),
+	}
+
+	// 对版本列表排序
+	sortedVersions := versions.SortVersionSlice(versionList)
+	fmt.Println("排序后的版本列表:")
+	for i, v := range sortedVersions {
+		fmt.Printf("%d. %s\n", i+1, v.Raw)
+	}
+
+	// 按主版本号分组
+	groupMap := versions.Group(versionList)
+	fmt.Printf("\n版本分组结果 (共%d个组):\n", len(groupMap))
+	for groupID, group := range groupMap {
+		// 使用Versions()获取所有版本，然后计算长度
+		versions := group.Versions()
+		fmt.Printf("版本组 %s: 包含%d个版本\n", groupID, len(versions))
+	}
 }

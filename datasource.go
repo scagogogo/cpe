@@ -34,8 +34,8 @@ const (
 	DataSourceCustom DataSourceType = "Custom"
 )
 
-// DataSource 表示一个漏洞数据源
-type DataSource struct {
+// VulnDataSource 表示一个漏洞数据源
+type VulnDataSource struct {
 	// 数据源类型
 	Type DataSourceType
 
@@ -98,8 +98,8 @@ type CacheSettings struct {
 }
 
 // NewDataSource 创建新的数据源
-func NewDataSource(sourceType DataSourceType, name, description, url string) *DataSource {
-	return &DataSource{
+func NewVulnDataSource(sourceType DataSourceType, name, description, url string) *VulnDataSource {
+	return &VulnDataSource{
 		Type:        sourceType,
 		Name:        name,
 		Description: description,
@@ -115,17 +115,17 @@ func NewDataSource(sourceType DataSourceType, name, description, url string) *Da
 }
 
 // SetAuthentication 设置数据源认证信息
-func (ds *DataSource) SetAuthentication(auth *DataSourceAuth) {
+func (ds *VulnDataSource) SetAuthentication(auth *DataSourceAuth) {
 	ds.Authentication = auth
 }
 
 // SetCacheSettings 设置缓存设置
-func (ds *DataSource) SetCacheSettings(cache *CacheSettings) {
+func (ds *VulnDataSource) SetCacheSettings(cache *CacheSettings) {
 	ds.CacheSettings = cache
 }
 
 // FetchData 从数据源获取数据
-func (ds *DataSource) FetchData(endpoint string) ([]byte, error) {
+func (ds *VulnDataSource) FetchData(endpoint string) ([]byte, error) {
 	url := ds.URL
 	if endpoint != "" {
 		if !strings.HasSuffix(url, "/") && !strings.HasPrefix(endpoint, "/") {
@@ -200,7 +200,7 @@ func (ds *DataSource) FetchData(endpoint string) ([]byte, error) {
 }
 
 // GetVulnerabilities 获取漏洞信息
-func (ds *DataSource) GetVulnerabilities(params map[string]string) ([]*CVEReference, error) {
+func (ds *VulnDataSource) GetVulnerabilities(params map[string]string) ([]*CVEReference, error) {
 	// 构建查询参数
 	endpoint := ""
 	queryParams := []string{}
@@ -260,7 +260,7 @@ func (ds *DataSource) GetVulnerabilities(params map[string]string) ([]*CVERefere
 }
 
 // GetVulnerabilityById 根据CVE ID获取漏洞信息
-func (ds *DataSource) GetVulnerabilityById(cveID string) (*CVEReference, error) {
+func (ds *VulnDataSource) GetVulnerabilityById(cveID string) (*CVEReference, error) {
 	// 标准化CVE ID
 	cveID = cve.Format(cveID)
 
@@ -327,7 +327,7 @@ func (ds *DataSource) GetVulnerabilityById(cveID string) (*CVEReference, error) 
 }
 
 // SearchVulnerabilitiesByCPE 根据CPE查找相关漏洞
-func (ds *DataSource) SearchVulnerabilitiesByCPE(cpe *CPE) ([]*CVEReference, error) {
+func (ds *VulnDataSource) SearchVulnerabilitiesByCPE(cpe *CPE) ([]*CVEReference, error) {
 	params := map[string]string{
 		"cpe": cpe.Cpe23,
 	}
@@ -336,7 +336,7 @@ func (ds *DataSource) SearchVulnerabilitiesByCPE(cpe *CPE) ([]*CVEReference, err
 }
 
 // 解析NVD格式的漏洞数据
-func (ds *DataSource) parseNVDVulnerabilities(data []byte) ([]*CVEReference, error) {
+func (ds *VulnDataSource) parseNVDVulnerabilities(data []byte) ([]*CVEReference, error) {
 	// NVD API响应结构
 	type NVDVuln struct {
 		CVE struct {
@@ -440,7 +440,7 @@ func (ds *DataSource) parseNVDVulnerabilities(data []byte) ([]*CVEReference, err
 }
 
 // 解析GitHub格式的漏洞数据
-func (ds *DataSource) parseGitHubVulnerabilities(data []byte) ([]*CVEReference, error) {
+func (ds *VulnDataSource) parseGitHubVulnerabilities(data []byte) ([]*CVEReference, error) {
 	// GitHub Security Advisory响应结构
 	type GitHubAdvisory struct {
 		ID          string `json:"ghsa_id"`
@@ -560,7 +560,7 @@ func (ds *DataSource) parseGitHubVulnerabilities(data []byte) ([]*CVEReference, 
 }
 
 // 解析RedHat格式的漏洞数据
-func (ds *DataSource) parseRedHatVulnerabilities(data []byte) ([]*CVEReference, error) {
+func (ds *VulnDataSource) parseRedHatVulnerabilities(data []byte) ([]*CVEReference, error) {
 	// RedHat CVE响应结构
 	type RedHatCVE struct {
 		CVE              string   `json:"CVE"`
@@ -645,7 +645,7 @@ func (ds *DataSource) parseRedHatVulnerabilities(data []byte) ([]*CVEReference, 
 // MultiSourceVulnerabilitySearch 多数据源漏洞搜索
 type MultiSourceVulnerabilitySearch struct {
 	// 数据源列表
-	Sources []*DataSource
+	Sources []*VulnDataSource
 
 	// 并发级别
 	ConcurrencyLevel int
@@ -658,7 +658,7 @@ type MultiSourceVulnerabilitySearch struct {
 }
 
 // NewMultiSourceSearch 创建新的多数据源搜索
-func NewMultiSourceSearch(sources []*DataSource) *MultiSourceVulnerabilitySearch {
+func NewMultiSourceSearch(sources []*VulnDataSource) *MultiSourceVulnerabilitySearch {
 	return &MultiSourceVulnerabilitySearch{
 		Sources:          sources,
 		ConcurrencyLevel: 3,
@@ -689,7 +689,7 @@ func (ms *MultiSourceVulnerabilitySearch) SearchByCVE(cveID string) ([]*CVERefer
 	for _, source := range ms.Sources {
 		sem <- struct{}{} // 获取信号量
 
-		go func(s *DataSource) {
+		go func(s *VulnDataSource) {
 			defer func() { <-sem }() // 释放信号量
 
 			// 设置超时
@@ -809,7 +809,7 @@ func (ms *MultiSourceVulnerabilitySearch) SearchByCPE(cpe *CPE) ([]*CVEReference
 	for _, source := range ms.Sources {
 		sem <- struct{}{} // 获取信号量
 
-		go func(s *DataSource) {
+		go func(s *VulnDataSource) {
 			defer func() { <-sem }() // 释放信号量
 
 			// 设置超时
@@ -929,8 +929,8 @@ func mergeStringSlices(slice1, slice2 []string) []string {
 }
 
 // CreateNVDDataSource 创建NVD数据源
-func CreateNVDDataSource(apiKey string) *DataSource {
-	ds := NewDataSource(
+func CreateNVDDataSource(apiKey string) *VulnDataSource {
+	ds := NewVulnDataSource(
 		DataSourceNVD,
 		"National Vulnerability Database",
 		"美国国家漏洞数据库",
@@ -947,8 +947,8 @@ func CreateNVDDataSource(apiKey string) *DataSource {
 }
 
 // CreateGitHubDataSource 创建GitHub数据源
-func CreateGitHubDataSource(token string) *DataSource {
-	ds := NewDataSource(
+func CreateGitHubDataSource(token string) *VulnDataSource {
+	ds := NewVulnDataSource(
 		DataSourceGitHub,
 		"GitHub Security Advisories",
 		"GitHub安全公告",
@@ -965,8 +965,8 @@ func CreateGitHubDataSource(token string) *DataSource {
 }
 
 // CreateRedHatDataSource 创建RedHat数据源
-func CreateRedHatDataSource() *DataSource {
-	return NewDataSource(
+func CreateRedHatDataSource() *VulnDataSource {
+	return NewVulnDataSource(
 		DataSourceRedHatCVE,
 		"Red Hat Security Data API",
 		"Red Hat安全数据API",
@@ -980,7 +980,208 @@ func CreateDefaultMultiSourceSearch() *MultiSourceVulnerabilitySearch {
 	nvd := CreateNVDDataSource("")
 	redhat := CreateRedHatDataSource()
 
-	sources := []*DataSource{nvd, redhat}
+	sources := []*VulnDataSource{nvd, redhat}
 
 	return NewMultiSourceSearch(sources)
+}
+
+/**
+ * CPEDataSource接口 定义了获取和查询CPE数据的标准方法集
+ *
+ * 此接口允许从不同来源（如NVD、本地文件、内存等）获取CPE数据，
+ * 并提供统一的查询接口。实现此接口的类型可以作为CPE数据提供者，
+ * 用于漏洞扫描、资产管理等安全应用场景。
+ */
+type CPEDataSource interface {
+	QueryByCPE(cpe string) ([]string, error)
+	GetCVEInfo(cveID string) (*CVEReference, error)
+}
+
+/**
+ * QueryByCPE 根据CPE查询漏洞信息
+ *
+ * 此函数接收一个CPE标识符，在所有已知的数据源中查找与该CPE相关的所有CVE漏洞ID。
+ * 可用于安全扫描和漏洞评估，帮助识别特定软件、硬件或系统组件存在的已知安全漏洞。
+ *
+ * 参数:
+ *   - cpe: 字符串类型的CPE标识符，可以是CPE 2.2或2.3格式
+ *
+ * 返回:
+ *   - []string: 与给定CPE相关的CVE ID列表
+ *   - error: 查询过程中遇到的错误，成功时为nil
+ *
+ * 使用示例:
+ *   ```go
+ *   // 查询Apache Log4j 2.0相关的漏洞
+ *   cveList, err := cpe.QueryByCPE("cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
+ *   if err != nil {
+ *       log.Fatalf("查询漏洞失败: %v", err)
+ *   }
+ *
+ *   fmt.Printf("发现%d个相关漏洞:\n", len(cveList))
+ *   for i, cveID := range cveList {
+ *       fmt.Printf("%d. %s\n", i+1, cveID)
+ *
+ *       // 可以进一步获取每个CVE的详细信息
+ *       cveInfo, _ := cpe.GetCVEInfo(cveID)
+ *       if cveInfo != nil {
+ *           fmt.Printf("   严重性: %s\n", cveInfo.Severity)
+ *           fmt.Printf("   描述: %s\n", cveInfo.Description)
+ *       }
+ *   }
+ *   ```
+ *
+ * 注意事项:
+ *   - 此函数需要预先初始化数据源，如通过DownloadAllNVDData获取NVD数据
+ *   - 性能取决于数据源的大小和实现方式，大型数据集可能需要较长的查询时间
+ *   - 传入的CPE格式应正确，否则可能导致查询结果不准确
+ *   - 建议对结果进行缓存，以提高重复查询的性能
+ */
+func QueryByCPE(cpe string) ([]string, error) {
+	// 这里实现实际的查询逻辑
+	return []string{}, nil
+}
+
+/**
+ * GetCVEInfoImpl 获取CVE漏洞详细信息
+ *
+ * 此函数根据CVE ID查询漏洞的详细信息，包括描述、严重性、发布日期等。
+ * 用于深入了解特定漏洞的技术细节和影响范围，为安全评估和修复决策提供依据。
+ *
+ * 参数:
+ *   - cveID: 标准格式的CVE标识符，如"CVE-2021-44228"
+ *
+ * 返回:
+ *   - *CVEReference: 包含漏洞详细信息的结构体指针，若未找到则为nil
+ *   - error: 查询过程中遇到的错误，成功时为nil
+ *
+ * 使用示例:
+ *   ```go
+ *   // 获取著名的Log4Shell漏洞信息
+ *   cveInfo, err := cpe.GetCVEInfoImpl("CVE-2021-44228")
+ *   if err != nil {
+ *       log.Fatalf("获取CVE信息失败: %v", err)
+ *   }
+ *
+ *   if cveInfo != nil {
+ *       fmt.Printf("CVE-2021-44228 详情:\n")
+ *       fmt.Printf("漏洞名称: %s\n", cveInfo.CVEID)
+ *       fmt.Printf("公开日期: %s\n", cveInfo.PublishedDate)
+ *       fmt.Printf("最后修改: %s\n", cveInfo.LastModifiedDate)
+ *       fmt.Printf("严重性: %s (基础评分: %.1f)\n", cveInfo.Severity, cveInfo.CVSSScore)
+ *       fmt.Printf("描述: %s\n", cveInfo.Description)
+ *
+ *       fmt.Printf("影响的产品数量: %d\n", len(cveInfo.AffectedCPEs))
+ *       for i, product := range cveInfo.AffectedCPEs[:3] { // 只显示前3个
+ *           fmt.Printf("  %d. %s\n", i+1, product)
+ *       }
+ *   } else {
+ *       fmt.Println("未找到此CVE的信息")
+ *   }
+ *   ```
+ *
+ * 注意事项:
+ *   - 需要预先初始化数据源，通常是通过DownloadAllNVDData完成
+ *   - CVE ID的格式应符合标准(CVE-YYYY-NNNNN)，将自动进行格式标准化
+ *   - 返回的信息完整度取决于数据源中可用的数据
+ *   - 某些较新或较罕见的CVE可能缺乏完整信息
+ */
+func GetCVEInfoImpl(cveID string) (*CVEReference, error) {
+	// 这里实现实际的查询逻辑
+	return nil, nil
+}
+
+/**
+ * RegisterDataSource 注册新的CPE数据源
+ *
+ * 此函数用于向系统注册自定义的CPE数据源，使其能够被标准查询接口使用。
+ * 允许扩展支持多种数据源，如自定义数据库、企业内部漏洞库等。
+ *
+ * 参数:
+ *   - dataSource: 实现了CPEDataSource接口的数据源对象
+ *
+ * 返回:
+ *   - 无返回值
+ *
+ * 使用示例:
+ *   ```go
+ *   // 创建自定义的数据源实现
+ *   type MyCustomDataSource struct {
+ *       // 实现相关字段
+ *       cpeData map[string][]string
+ *       cveData map[string]*CVEReference
+ *   }
+ *
+ *   // 实现CPEDataSource接口的方法
+ *   func (m *MyCustomDataSource) QueryByCPE(cpe string) ([]string, error) {
+ *       // 自定义实现
+ *       return m.cpeData[cpe], nil
+ *   }
+ *
+ *   func (m *MyCustomDataSource) GetCVEInfo(cveID string) (*CVEReference, error) {
+ *       // 自定义实现
+ *       return m.cveData[cveID], nil
+ *   }
+ *
+ *   // 初始化自定义数据源
+ *   mySource := &MyCustomDataSource{
+ *       cpeData: make(map[string][]string),
+ *       cveData: make(map[string]*CVEReference),
+ *   }
+ *
+ *   // 添加一些测试数据
+ *   mySource.cpeData["cpe:2.3:a:mycompany:myproduct:1.0:*:*:*:*:*:*:*"] = []string{"CVE-2023-00001"}
+ *   mySource.cveData["CVE-2023-00001"] = &cpe.CVEReference{
+ *       CVEID: "CVE-2023-00001",
+ *       Description: "A vulnerability in MyProduct allows...",
+ *       Severity: "HIGH",
+ *       CVSSScore: 8.5,
+ *   }
+ *
+ *   // 注册自定义数据源
+ *   cpe.RegisterDataSource(mySource)
+ *
+ *   // 现在可以通过标准接口查询自定义数据源
+ *   cves, _ := cpe.QueryByCPE("cpe:2.3:a:mycompany:myproduct:1.0:*:*:*:*:*:*:*")
+ *   // cves应该包含"CVE-2023-00001"
+ *   ```
+ *
+ * 注意事项:
+ *   - 自定义数据源应确保线程安全，特别是在并发环境中
+ *   - 数据源的实现质量直接影响查询性能和结果准确性
+ *   - 多个数据源注册后，查询将聚合所有数据源的结果
+ *   - 注册相同的数据源多次可能导致重复结果
+ */
+func RegisterDataSource(dataSource CPEDataSource) {
+	// 这里实现注册数据源逻辑
+}
+
+/**
+ * ClearDataSources 清除所有注册的数据源
+ *
+ * 此函数用于清除系统中所有已注册的CPE数据源，通常用于重置系统状态、
+ * 释放资源或准备重新配置数据源时使用。
+ *
+ * 参数:
+ *   - 无参数
+ *
+ * 返回:
+ *   - 无返回值
+ *
+ * 使用示例:
+ *   ```go
+ *   // 清除所有已注册的数据源
+ *   cpe.ClearDataSources()
+ *
+ *   // 重新注册自定义数据源
+ *   cpe.RegisterDataSource(myNewDataSource)
+ *   ```
+ *
+ * 注意事项:
+ *   - 此操作会清除所有数据源，包括默认数据源和自定义数据源
+ *   - 清除后需要重新注册数据源才能使用查询功能
+ *   - 在需要切换环境或重置系统时使用此函数
+ */
+func ClearDataSources() {
+	// 这里实现清除数据源逻辑
 }
