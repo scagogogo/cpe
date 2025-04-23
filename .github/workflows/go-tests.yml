@@ -61,12 +61,14 @@ jobs:
       
     - name: Build examples
       run: |
-        for dir in examples/*; do
+        cd examples
+        for dir in */; do
           if [ -d "$dir" ]; then
+            dir=${dir%/}  # 移除末尾的斜杠
             echo "Building example: $dir"
             cd "$dir"
-            go build -v
-            cd -
+            go build -v -o "$dir"
+            cd ..
           fi
         done
   
@@ -87,26 +89,25 @@ jobs:
     - name: Get dependencies
       run: go mod download
       
-    - name: Build examples
+    - name: Build and run examples
       run: |
-        for dir in examples/*; do
+        cd examples
+        for dir in */; do
           if [ -d "$dir" ]; then
-            echo "Building example: $dir"
+            dir=${dir%/}  # 移除末尾的斜杠
+            echo "Building and running example: $dir"
             cd "$dir"
-            go build -v
-            cd -
-          fi
-        done
-      
-    - name: Run examples
-      run: |
-        for dir in examples/*; do
-          if [ -d "$dir" ]; then
-            echo "Running example: $dir"
-            cd "$dir"
-            if [ -f "$(basename $dir)" ]; then
-              timeout 30s ./$(basename $dir) || echo "Example $dir timed out after 30 seconds"
+            
+            # 构建二进制文件
+            go build -v -o "$dir"
+            
+            # 检查二进制文件是否存在并运行
+            if [ -f "$dir" ]; then
+              echo "Running example: $dir"
+              timeout 30s ./"$dir" || echo "Example $dir timed out or failed with exit code $?"
+            else
+              echo "Warning: Binary not created for $dir"
             fi
-            cd -
+            cd ..
           fi
         done 
