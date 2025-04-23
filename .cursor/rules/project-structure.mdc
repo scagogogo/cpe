@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# CPE库项目结构
+
+本项目是一个Go语言实现的CPE (Common Platform Enumeration) 库，用于处理CPE标识符的解析、验证、标准化和搜索。
+
+## 核心文件
+
+- [validation.go](mdc:validation.go) - 包含CPE对象和组件值的验证与标准化功能
+- [storage.go](mdc:storage.go) - 定义存储接口和存储管理器，用于CPE和CVE数据的持久化和检索
+- [set.go](mdc:set.go) - 实现CPE集合相关功能
+
+## 主要类型和接口
+
+- `CPE` - 表示一个Common Platform Enumeration对象
+- `Storage` - 存储接口，定义了CPE和CVE数据的存取方法
+- `StorageManager` - 管理主存储和缓存存储的对象，提供缓存加速功能
+
+## 命名规范
+
+- 类型名称使用驼峰命名法，如 `CPE`、`StorageManager`
+- 方法名称也使用驼峰命名法，如 `ValidateCPE`、`NormalizeComponent`
+- 变量和字段使用小驼峰命名法，如 `cpe`、`primaryStorage`
+
+## 代码注释
+
+- 所有方法和重要类型都有详细的中文注释
+- 注释包括功能描述、参数说明、返回值说明、错误处理、使用示例等
