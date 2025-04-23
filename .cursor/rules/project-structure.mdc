@@ -9,15 +9,52 @@ alwaysApply: false
 
 ## 核心文件
 
+### 主要功能文件
+- [cpe.go](mdc:cpe.go) - 定义CPE基本结构和核心功能
+- [wfn.go](mdc:wfn.go) - 实现WFN (Well-Formed Name) 格式处理
 - [validation.go](mdc:validation.go) - 包含CPE对象和组件值的验证与标准化功能
-- [storage.go](mdc:storage.go) - 定义存储接口和存储管理器，用于CPE和CVE数据的持久化和检索
 - [set.go](mdc:set.go) - 实现CPE集合相关功能
+- [search.go](mdc:search.go) - 提供CPE搜索和匹配功能
+- [advanced_matching.go](mdc:advanced_matching.go) - 高级匹配功能实现
+- [applicability.go](mdc:applicability.go) - 实现CPE适用性语言功能
+
+### 存储相关文件
+- [storage.go](mdc:storage.go) - 定义存储接口和存储管理器
+- [file_storage.go](mdc:file_storage.go) - 文件系统存储实现
+- [memory_storage.go](mdc:memory_storage.go) - 内存存储实现
+- [dictionary.go](mdc:dictionary.go) - CPE字典功能
+
+### 数据来源和外部集成
+- [datasource.go](mdc:datasource.go) - 数据源接口定义和实现
+- [nvd.go](mdc:nvd.go) - 美国国家漏洞数据库(NVD)集成
+- [cve.go](mdc:cve.go) - CVE(Common Vulnerabilities and Exposures)数据处理
+
+### 解析器
+- [parser_2.2.go](mdc:parser_2.2.go) - CPE 2.2版本解析器
+- [parser_2.3.go](mdc:parser_2.3.go) - CPE 2.3版本解析器
+
+### 组件类型定义
+- [part.go](mdc:part.go) - CPE部件类型(应用、操作系统、硬件)
+- [vendor.go](mdc:vendor.go) - 供应商组件
+- [product.go](mdc:product.go) - 产品组件
+- [version.go](mdc:version.go) - 版本组件
+- [update.go](mdc:update.go) - 更新组件
+- [edition.go](mdc:edition.go) - 版本组件
+- [language.go](mdc:language.go) - 语言组件
+
+### 错误处理
+- [errors.go](mdc:errors.go) - 定义各种类型的错误和异常处理
 
 ## 主要类型和接口
 
 - `CPE` - 表示一个Common Platform Enumeration对象
 - `Storage` - 存储接口，定义了CPE和CVE数据的存取方法
 - `StorageManager` - 管理主存储和缓存存储的对象，提供缓存加速功能
+- `DataSource` - 数据源接口，用于从外部获取CPE和CVE数据
+- `CPESet` - CPE集合，用于管理多个CPE及其关系
+- `MatchOptions` - 定义CPE匹配选项
+- `AdvancedMatchOptions` - 高级匹配选项
+- `CVEReference` - CVE引用数据结构
 
 ## 命名规范
 

@@ -1,5 +1,135 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# CPE存储功能指南
+
+CPE库提供了全面的存储功能，用于管理CPE和CVE数据。相关文件包括：
+
+- [storage.go](mdc:storage.go) - 定义存储接口和存储管理器
+- [file_storage.go](mdc:file_storage.go) - 基于文件系统的存储实现
+- [memory_storage.go](mdc:memory_storage.go) - 基于内存的存储实现
+- [dictionary.go](mdc:dictionary.go) - CPE字典功能
+
+## 核心接口
+
+### Storage 接口
+
+`Storage` 接口定义了CPE和CVE数据的存储和检索方法:
+
+```go
+type Storage interface {
+    Initialize() error
+    Close() error
+    StoreCPE(cpe *CPE) error
+    RetrieveCPE(id string) (*CPE, error)
+    UpdateCPE(cpe *CPE) error
+    DeleteCPE(id string) error
+    SearchCPE(criteria *CPE, options *MatchOptions) ([]*CPE, error)
+    AdvancedSearchCPE(criteria *CPE, options *AdvancedMatchOptions) ([]*CPE, error)
+    StoreCVE(cve *CVEReference) error
+    RetrieveCVE(cveID string) (*CVEReference, error)
+    // 更多方法...
+}
+```
+
+## 存储实现
+
+### 文件存储
+
+文件存储 (`FileStorage`) 将CPE和CVE数据持久化到文件系统中：
+
+```go
+fileStorage, err := cpe.NewFileStorage("/path/to/data", true)
+if err != nil {
+    log.Fatalf("创建文件存储失败: %v", err)
+}
+err = fileStorage.Initialize()
+```
+
+### 内存存储
+
+内存存储 (`MemoryStorage`) 提供高性能但非持久化的存储：
+
+```go
+memStorage, err := cpe.NewMemoryStorage()
+err = memStorage.Initialize()
+```
+
+## 存储管理器
+
+`StorageManager` 是一个管理主存储和缓存存储的封装类，主要方法包括:
+
+- `NewStorageManager(primary Storage) *StorageManager` - 创建存储管理器
+- `SetCache(cache Storage)` - 设置缓存存储
+- `GetCPE(id string) (*CPE, error)` - 优先从缓存获取CPE
+- `StoreCPE(cpe *CPE) error` - 存储CPE到主存储和缓存
+- `GetCVE(cveID string) (*CVEReference, error)` - 优先从缓存获取CVE
+- `Search(criteria *CPE, options *MatchOptions) ([]*CPE, error)` - 搜索CPE
+- `AdvancedSearch(criteria *CPE, options *AdvancedMatchOptions) ([]*CPE, error)` - 高级搜索CPE
+- `InvalidateCache(id string)` - 使指定CPE的缓存失效
+- `ClearCache() error` - 清空缓存
+- `GetStats() (*StorageStats, error)` - 获取统计信息
+
+## 使用示例
+
+创建存储管理器:
+```go
+// 创建主存储
+fileStorage, _ := cpe.NewFileStorage("/path/to/data", true)
+fileStorage.Initialize()
+
+// 创建存储管理器
+manager := cpe.NewStorageManager(fileStorage)
+
+// 可选: 添加内存缓存
+memCache, _ := cpe.NewMemoryStorage()
+memCache.Initialize()
+manager.SetCache(memCache)
+```
+
+检索CPE:
+```go
+cpeID := "cpe:2.3:o:microsoft:windows:10:*:*:*:*:*:*:*"
+windowsCPE, err := manager.GetCPE(cpeID)
+```
+
+搜索CPE:
+```go
+// 搜索所有Microsoft Windows 10产品
+criteria := &cpe.CPE{
+    Vendor:      cpe.Vendor("microsoft"),
+    ProductName: cpe.Product("windows"),
+    Version:     cpe.Version("10"),
+}
+options := &cpe.MatchOptions{}
+results, err := manager.Search(criteria, options)
+```
+
+## 缓存策略
+
+- 读取操作优先从缓存获取，缓存未命中再从主存储获取
+- 写入操作同时更新主存储和缓存
+- 支持单个缓存项失效和整个缓存清空
+- 默认缓存过期时间为1小时，可通过CacheTTLSeconds字段调整
+
+## 数据字典
+
+`CPEDictionary` 提供了管理CPE字典的功能：
+
+```go
+// 创建字典
+dict := &cpe.CPEDictionary{
+    Name:        "NVD CPE Dictionary",
+    Description: "National Vulnerability Database CPE Dictionary",
+    Version:     "1.0",
+    Items:       []*cpe.CPEDictionaryItem{...},
+}
+
+// 存储字典
+err := storage.StoreDictionary(dict)
+
+// 检索字典
+dict, err := storage.RetrieveDictionary()
+```

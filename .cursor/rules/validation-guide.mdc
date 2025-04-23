@@ -1,5 +1,105 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+# CPE验证和标准化指南
+
+CPE (Common Platform Enumeration) 库提供了全面的验证和标准化功能，确保CPE数据符合规范。相关文件包括：
+
+- [validation.go](mdc:validation.go) - 核心验证和标准化功能
+- [errors.go](mdc:errors.go) - 验证错误类型定义
+- [wfn.go](mdc:wfn.go) - 形式良好名称(WFN)处理
+- [parser_2.3.go](mdc:parser_2.3.go) - CPE 2.3格式解析
+
+## 主要方法
+
+### 验证方法
+
+- `ValidateComponent(value string, componentName string) error` - 验证单个CPE组件值是否合法
+- `ValidateCPE(cpe *CPE) error` - 验证整个CPE对象是否合法
+
+### 标准化方法
+
+- `NormalizeComponent(value string) string` - 标准化CPE组件值，如转换为小写、替换空格为下划线
+- `NormalizeCPE(cpe *CPE) *CPE` - 标准化整个CPE对象的所有字段
+
+### 格式转换方法
+
+- `FSStringToURI(fs string) string` - 将文件系统安全的CPE字符串转换为标准URI格式
+- `URIToFSString(uri string) string` - 将CPE URI转换为文件系统安全的字符串格式
+- `FormatCpe23(cpe *CPE) string` - 将CPE对象格式化为CPE 2.3 URI格式字符串
+
+## CPE格式支持
+
+库支持多种CPE格式：
+
+1. **CPE 2.3 URI格式**：`cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*`
+2. **CPE 2.2 URI格式**：`cpe:/a:microsoft:windows:10`
+3. **格式化字符串**：`cpe:2.3:a:microsoft:windows:10:-:-:-:-:-:-:-`
+4. **文件系统安全格式**：`cpe___2.3_a_microsoft_windows_10_-_-_-_-_-_-_-`
+
+## 验证规则
+
+组件验证检查以下内容：
+
+- 非法字符：`!@#$%^&(){}[]|\;'"<>?`
+- 控制字符：ASCII值小于32或大于126的字符
+- 特殊值：`*`(任意值)和`-`(不适用)
+
+## 使用示例
+
+验证CPE对象:
+```go
+cpe := &CPE{
+  Part: PartType{ShortName: "a"},
+  Vendor: "microsoft",
+  ProductName: "windows",
+  Version: "10"
+}
+err := ValidateCPE(cpe)
+if err != nil {
+  log.Printf("CPE验证失败: %v", err)
+}
+```
+
+标准化CPE对象:
+```go
+// 创建原始CPE对象
+originalCpe := &CPE{
+  Vendor: "Microsoft",     // 大写
+  ProductName: "Windows 10", // 包含空格
+}
+
+// 标准化
+normalizedCpe := NormalizeCPE(originalCpe)
+// 结果: normalizedCpe.Vendor = "microsoft"
+// 结果: normalizedCpe.ProductName = "windows_10"
+```
+
+格式转换:
+```go
+// URI转文件系统安全格式
+fsString := URIToFSString("cpe:2.3:a:microsoft:windows:10:-:-:-:-:-:-:-")
+// 结果: "cpe___2.3_a_microsoft_windows_10_-_-_-_-_-_-_-"
+
+// 文件系统安全格式转URI
+uriString := FSStringToURI("cpe___2.3_a_microsoft_windows_10_-_-_-_-_-_-_-")
+// 结果: "cpe:2.3:a:microsoft:windows:10:-:-:-:-:-:-:-"
+```
+
+## 标准化过程
+
+标准化处理包括：
+- 将所有字母转换为小写
+- 将空格替换为下划线
+- 将多个连续下划线替换为单个下划线
+- 特殊值(`*`和`-`)保持不变
+- 非破坏性操作，创建新对象而不修改原始对象
+
+## 错误类型
+
+验证错误包括：
+- `InvalidFormatError` - 格式错误
+- `InvalidPartError` - Part字段值无效
+- `InvalidAttributeError` - 组件字段包含非法字符
