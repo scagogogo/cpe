@@ -27,7 +27,7 @@
 |------|-----|
 | **项目** | cpe-skills |
 | **一句话定位** | CPE（通用平台枚举）工具包 —— 解析、匹配、生成、漏洞关联、SBOM、VEX。 |
-| **语言** | Go（`module github.com/scagogogo/cpe-skills`，要求 **Go ≥ 1.23**） |
+| **语言** | Go（`module github.com/scagogogo/cpe-skills`，要求 **Go ≥ 1.25**） |
 | **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.0.0 |
 | **覆盖率** | ≥ 91%（CI 对主包门槛 90%） |
 | **测试用例** | 1258 |

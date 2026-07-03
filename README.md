@@ -27,7 +27,7 @@
 |-------|-------|
 | **Project** | cpe-skills |
 | **One-liner** | CPE (Common Platform Enumeration) toolkit — parsing, matching, generation, vulnerability correlation, SBOM, VEX. |
-| **Language** | Go (`module github.com/scagogogo/cpe-skills`, requires **Go ≥ 1.23**) |
+| **Language** | Go (`module github.com/scagogogo/cpe-skills`, requires **Go ≥ 1.25**) |
 | **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.0.0 |
 | **Coverage** | ≥ 91% (CI gate at 90% on main package) |
 | **Test cases** | 1258 |
