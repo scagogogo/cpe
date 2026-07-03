@@ -16,6 +16,9 @@ hero:
       text: API 参考
       link: /zh/api/
     - theme: alt
+      text: 命令行
+      link: /zh/cli/
+    - theme: alt
       text: GitHub
       link: https://github.com/scagogogo/cpe-skills
 

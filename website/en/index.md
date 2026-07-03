@@ -16,6 +16,9 @@ hero:
       text: API Reference
       link: /en/api/
     - theme: alt
+      text: CLI
+      link: /en/cli/
+    - theme: alt
       text: GitHub
       link: https://github.com/scagogogo/cpe-skills
 
