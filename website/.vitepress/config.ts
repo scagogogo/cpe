@@ -253,6 +253,8 @@ const enSidebar = {
         { text: 'match', link: '/en/cli/match' },
         { text: 'search', link: '/en/cli/search' },
         { text: 'dict', link: '/en/cli/dict' },
+        { text: 'nvd', link: '/en/cli/nvd' },
+        { text: 'cve', link: '/en/cli/cve' },
         { text: 'mcp', link: '/en/cli/mcp' },
         { text: 'version', link: '/en/cli/version' }
       ]
@@ -334,6 +336,8 @@ const zhSidebar = {
         { text: 'match', link: '/zh/cli/match' },
         { text: 'search', link: '/zh/cli/search' },
         { text: 'dict', link: '/zh/cli/dict' },
+        { text: 'nvd', link: '/zh/cli/nvd' },
+        { text: 'cve', link: '/zh/cli/cve' },
         { text: 'mcp', link: '/zh/cli/mcp' },
         { text: 'version', link: '/zh/cli/version' }
       ]
