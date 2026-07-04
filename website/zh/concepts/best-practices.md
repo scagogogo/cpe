@@ -89,6 +89,34 @@ opts.CacheMaxAge = 168
 
 对固定集合的重复匹配，构建一次 `CPEIndex` 后调用 `Lookup`。在热路径里对大切片做线性扫描是最常见的性能回归。
 
+## 决策流程
+
+上面七条实践可串成一条针对任意输入 CPE 字符串的决策树，从顶部开始走：
+
+```mermaid
+flowchart TD
+    A[Raw CPE string<br/>from SBOM / manifest / user] --> B{Parse<br/>succeeds?}
+    B -- no --> C[Reject: typed<br/>InvalidFormat error]
+    B -- yes --> D{ValidateCPE<br/>passes?}
+    D -- no --> E[Reject: typed<br/>InvalidPart error]
+    D -- yes --> F[NormalizeCPEVendorProduct]
+    F --> G[NormalizeCPE]
+    G --> H{Repeated<br/>matching?}
+    H -- yes --> I[Build CPEIndex once<br/>Lookup per query]
+    H -- no --> J[Parse + match inline]
+    I --> K[BatchScanner<br/>bounded workers]
+    J --> K
+    K --> L{NVD feed<br/>cached?}
+    L -- no --> M[Download + cache<br/>persistent CacheDir]
+    L -- yes --> N[Reuse cache]
+    M --> O[Scan + report]
+    N --> O
+```
+
+::: tip MustParse 捷径
+上面的决策树用的是 `Parse`。`MustParse` 只跳过第一个判定框——而且仅适用于编译期字面量，那里解析失败是程序员 bug，不是运行时状况。
+:::
+
 ## 小结
 
 在边界校验、按类型化错误分支、`MustParse` 只用于字面量、规范化名称、限制并发、缓存 NVD 数据。这些习惯能挡住绝大多数真实事故。

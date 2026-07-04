@@ -7,6 +7,15 @@ outline: deep
 
 The `cpeskills` SDK exists to answer four security questions: *What do I have? What's vulnerable? How bad is it? What do I do?* Each use case below maps to a concrete API path.
 
+```mermaid
+pie showData
+  title Security workflows by weight
+  "Vulnerability management" : 40
+  "Risk scoring + EPSS" : 25
+  "SBOM generation" : 20
+  "Compliance + VEX" : 15
+```
+
 ## Vulnerability management
 
 Take an asset inventory, match each item against NVD's known-vulnerable CPE lists, and produce findings. `DownloadAllNVDData` loads the feeds once; `FindCVEsForCPE` queries them offline.

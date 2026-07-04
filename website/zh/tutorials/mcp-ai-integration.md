@@ -85,6 +85,34 @@ flowchart LR
 | `generate_cpe` | part、vendor、product、version | 一条 CPE 2.3 URI |
 | `compare_versions` | 两个版本字符串 | 顺序（`-1`/`0`/`1`） |
 
+## JSON-RPC 时序
+
+流程图展示静态拓扑；时序图展示 stdio 上实际的请求/响应模式：
+
+```mermaid
+sequenceDiagram
+    participant AI as AI client
+    participant MCP as cpe mcp serve
+
+    AI->>MCP: initialize request
+    MCP-->>AI: initialize response (capabilities)
+
+    AI->>MCP: tools/list request
+    MCP-->>AI: tools/list response (6 tools)
+
+    loop for each user query
+        AI->>MCP: tools/call "parse_cpe"
+        MCP->>MCP: cpeskills.MustParse()
+        MCP-->>AI: {part, vendor, product, ...}
+
+        AI->>MCP: tools/call "match_cpe"
+        MCP->>MCP: cpeskills.Match()
+        MCP-->>AI: {match: true}
+    end
+
+    Note over AI,MCP: All traffic is newline-delimited JSON on stdin/stdout
+```
+
 ## 预期行为
 
 重启后，cpe-skills 服务会列在 Claude Desktop 的连接器面板。让它"为 Apache log4j 2.14.0 生成 CPE"，结果为：

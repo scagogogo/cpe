@@ -72,6 +72,28 @@ func main() {
 cpe:2.3:<part>:<vendor>:<product>:<version>:<update>:<edition>:<language>:<sw_edition>:<target_sw>:<target_hw>:<other>
 ```
 
+下面的思维导图展示三种 part 类型及其后 11 个逻辑属性：
+
+```mermaid
+mindmap
+  root((CPE 2.3))
+    part
+      a: application
+      o: operating system
+      h: hardware
+    attributes
+      vendor
+      product
+      version
+      update
+      edition
+      language
+      sw_edition
+      target_sw
+      target_hw
+      other
+```
+
 2.2 URI 形式把同一批逻辑字段塞进更少的槽位；映射关系见 [CPE 2.2 与 2.3](./cpe-22-vs-23.md)。
 
 ## 谁维护 CPE

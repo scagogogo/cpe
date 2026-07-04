@@ -89,6 +89,45 @@ flowchart LR
     K --> R
 ```
 
+## 请求生命周期
+
+上面的流程图看起来是线性的，但 NVD 拉取和富化在特定时刻扇出。时序图展示缓存如何短路慢路径：
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant SDK as cpeskills
+    participant NVD as NVD feeds
+    participant EPSS as EPSS API
+    participant KEV as KEV list
+
+    Caller->>SDK: Parse(cpeStr)
+    SDK-->>Caller: *CPE
+
+    Caller->>SDK: DownloadAllNVDData(opts)
+    alt cache miss
+        SDK->>NVD: GET feeds (gzip)
+        NVD-->>SDK: ~hundreds of MB
+        SDK->>SDK: write CacheDir
+    else cache hit
+        SDK->>SDK: read CacheDir (fresh)
+    end
+    SDK-->>Caller: nvdData
+
+    Caller->>SDK: FindCVEsForCPE(cpe, nvdData)
+    SDK-->>Caller: []CVE IDs
+
+    par enrich in parallel
+        Caller->>EPSS: GetScore(cveID)
+        EPSS-->>Caller: 0-1 score
+    and
+        Caller->>KEV: IsListed(cveID)
+        KEV-->>Caller: bool
+    end
+
+    Caller-->>Caller: sort by EPSS+KEV
+```
+
 ## 预期输出
 
 ```

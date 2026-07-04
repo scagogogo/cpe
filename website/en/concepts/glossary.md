@@ -70,6 +70,38 @@ The 11 fields of a CPE 2.3 Formatted String, in order:
 | `o`   | operating system | OS           |
 | `h`   | hardware     | Hardware device  |
 
+## Term map
+
+The terms above cluster into four families. The mindmap below shows how they relate — naming, vulnerability data, exploitation signals, and artifact formats.
+
+```mermaid
+mindmap
+  root((cpe-skills))
+    Naming
+      CPE
+        WFN
+        ANY wildcard
+        NA not-applicable
+      PURL
+        pkg: URI
+    Vulnerability data
+      CVE
+      NVD
+      OSV
+      CVSS
+    Exploitation signals
+      EPSS
+        0-1 probability
+      KEV
+        CISA catalogue
+    Artifact formats
+      SBOM
+        CycloneDX
+        SPDX
+      VEX
+      SARIF
+```
+
 ## Summary
 
 When a term is ambiguous, fall back to this table. The two CPE-specific sentinels to remember are `*` (ANY, wildcard) and `-` (NA, not applicable); their matching semantics differ and are the source of most beginner mistakes.

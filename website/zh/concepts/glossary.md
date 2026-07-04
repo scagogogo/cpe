@@ -70,6 +70,38 @@ CPE 2.3 格式化字符串的 11 个字段，按顺序：
 | `o`  | operating system | 操作系统   |
 | `h`  | hardware         | 硬件设备   |
 
+## 术语图谱
+
+上述术语可归为四类。下面的思维导图展示它们的关系——命名、漏洞数据、利用信号、制品格式。
+
+```mermaid
+mindmap
+  root((cpe-skills))
+    Naming
+      CPE
+        WFN
+        ANY wildcard
+        NA not-applicable
+      PURL
+        pkg: URI
+    Vulnerability data
+      CVE
+      NVD
+      OSV
+      CVSS
+    Exploitation signals
+      EPSS
+        0-1 probability
+      KEV
+        CISA catalogue
+    Artifact formats
+      SBOM
+        CycloneDX
+        SPDX
+      VEX
+      SARIF
+```
+
 ## 小结
 
 术语含糊时回到本表。CPE 中需牢记的两个哨兵值是 `*`（ANY，通配）与 `-`（NA，不适用）；二者匹配语义不同，是初学者最常见的坑。

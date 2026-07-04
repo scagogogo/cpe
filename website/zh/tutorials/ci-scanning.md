@@ -98,6 +98,50 @@ flowchart TD
     F -->|count == 0| OK["exit 0, 通过"]
 ```
 
+## CI 耗时分布
+
+上面的流水线每次推送都跑。时序图展示最慢的操作在何处、以及通过/失败决策何时做出：
+
+```mermaid
+sequenceDiagram
+    participant Runner as CI runner
+    participant SDK as cpeskills
+    participant NVD as NVD feeds
+
+    Runner->>SDK: checkout + read go.mod
+    Runner->>SDK: BuildSBOMFromManifest(mod)
+    SDK-->>Runner: *SBOM
+
+    loop annotate
+        Runner->>SDK: SetCPE(comp, cpe)
+    end
+
+    Runner->>SDK: DownloadAllNVDData(opts)
+    alt cache hit (previous run)
+        SDK->>SDK: read CacheDir (<1s)
+    else cache miss / stale
+        SDK->>NVD: GET feeds (~5 min)
+        NVD-->>SDK: gzipped JSON
+        SDK->>SDK: write CacheDir
+    end
+    SDK-->>Runner: nvdData
+
+    Runner->>SDK: ScoreComponents(sbom, nvdData)
+    SDK-->>Runner: scored *SBOM
+
+    Runner->>SDK: SortByRisk(sbom)
+    SDK-->>Runner: sorted
+
+    Runner->>SDK: FilterByPriority(sbom, "critical")
+    SDK-->>Runner: []Component
+
+    alt criticalCount > 0
+        Runner-->>Runner: exit 1, fail build
+    else criticalCount == 0
+        Runner-->>Runner: exit 0, pass
+    end
+```
+
 ## 预期输出（失败运行）
 
 ```

@@ -367,6 +367,41 @@ func main() {
 - **搜索选项**: 合理设置 `SearchOptions` 的分页与过滤条件
 - **匹配选项**: 使用 `DefaultMatchOptions` 简化常见匹配场景
 
+```mermaid
+classDiagram
+    class Storage {
+        <<interface>>
+        +Initialize() error
+        +Close() error
+        +StoreCPE(*CPE) error
+        +RetrieveCPE(id) (*CPE, error)
+        +SearchCPE(*CPE, *MatchOptions) []*CPE
+        +StoreCVE(*CVEReference) error
+        +FindCVEsByCPE(*CPE) []*CVEReference
+    }
+    class MemoryStorage {
+        +NewMemoryStorage()
+    }
+    class FileStorage {
+        +NewFileStorage(baseDir, useCache)
+    }
+    class CPEIndex {
+        +NewCPEIndex(cpes)
+        +Lookup()
+    }
+    class StorageManager {
+        +NewStorageManager(primary)
+        +SetCache(Storage)
+        +GetCPE / StoreCPE
+    }
+
+    Storage <|.. MemoryStorage
+    Storage <|.. FileStorage
+    StorageManager o-- Storage : primary
+    StorageManager o-- Storage : cache
+    CPEIndex ..> Storage : pre-indexed lookup
+```
+
 ## 最佳实践
 
 1. **选择合适的存储后端**: 文件存储用于持久化，内存存储用于测试

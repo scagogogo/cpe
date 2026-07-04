@@ -89,6 +89,34 @@ opts.CacheMaxAge = 168
 
 For repeated matching against a fixed set, build a `CPEIndex` once and call `Lookup`. Linear scans over large slices in a hot loop are the most common perf regression.
 
+## Decision flow
+
+The seven practices above form a single decision tree for any incoming CPE string. Follow it from the top:
+
+```mermaid
+flowchart TD
+    A[Raw CPE string<br/>from SBOM / manifest / user] --> B{Parse<br/>succeeds?}
+    B -- no --> C[Reject: typed<br/>InvalidFormat error]
+    B -- yes --> D{ValidateCPE<br/>passes?}
+    D -- no --> E[Reject: typed<br/>InvalidPart error]
+    D -- yes --> F[NormalizeCPEVendorProduct]
+    F --> G[NormalizeCPE]
+    G --> H{Repeated<br/>matching?}
+    H -- yes --> I[Build CPEIndex once<br/>Lookup per query]
+    H -- no --> J[Parse + match inline]
+    I --> K[BatchScanner<br/>bounded workers]
+    J --> K
+    K --> L{NVD feed<br/>cached?}
+    L -- no --> M[Download + cache<br/>persistent CacheDir]
+    L -- yes --> N[Reuse cache]
+    M --> O[Scan + report]
+    N --> O
+```
+
+::: tip MustParse shortcut
+The tree above uses `Parse`. `MustParse` only skips the first decision box — and only for compile-time literals where a parse failure is a programmer bug, not a runtime condition.
+:::
+
 ## Summary
 
 Validate at the boundary, branch on typed errors, keep `MustParse` for literals, normalise names, bound concurrency, and cache NVD data. These habits prevent the vast majority of real-world incidents.

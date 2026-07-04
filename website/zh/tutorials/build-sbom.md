@@ -94,6 +94,42 @@ flowchart LR
     S2 -->|ExportSBOMToCycloneDX| F["sbom.cdx.json"]
 ```
 
+## 构建时序
+
+流程图隐藏了逐组件循环。时序图把迭代显式画出来：
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant SDK as cpeskills
+    participant NVD as NVD feeds
+    participant FS as filesystem
+
+    Caller->>SDK: BuildSBOMFromManifest(goModBytes)
+    SDK-->>Caller: *SBOM
+
+    loop for each component in SBOM
+        Caller->>SDK: SetCPE(comp, cpe)
+        Caller->>SDK: SetPURL(comp, purl)
+    end
+
+    Caller->>SDK: DownloadAllNVDData(opts)
+    alt cache miss
+        SDK->>NVD: GET feeds
+        NVD-->>SDK: data
+    else cache hit
+        SDK->>SDK: read CacheDir
+    end
+    SDK-->>Caller: nvdData
+
+    Caller->>SDK: EnrichWithVulnerabilities(sbom, nvdData)
+    SDK-->>Caller: enriched *SBOM
+
+    Caller->>SDK: ExportSBOMToCycloneDX(sbom)
+    SDK->>FS: write sbom.cdx.json
+    SDK-->>Caller: nil
+```
+
 ## 预期输出
 
 ```

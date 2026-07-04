@@ -375,6 +375,37 @@ Microsoft应用程序:
   其他供应商: 1
 ```
 
+## 匹配判定状态机
+
+匹配过程是一个状态机：每次属性比较都把关系推向六种结局之一。下图展示 `ANY` 与 `NA` 如何驱动状态转换：
+
+```mermaid
+stateDiagram-v2
+    [*] --> compare_attr_1
+    compare_attr_1 --> compare_attr_2: equal
+    compare_attr_1 --> mark_superset: source ANY
+    compare_attr_1 --> mark_subset: target ANY
+    compare_attr_1 --> mark_disjoint: mismatch (neither ANY)
+
+    compare_attr_2 --> compare_attr_3: equal
+    compare_attr_2 --> update_superset: source ANY
+    compare_attr_2 --> update_subset: target ANY
+    compare_attr_2 --> mark_disjoint: mismatch
+
+    compare_attr_3 --> ... : ... (11 fields)
+
+    state aggregate {
+        [*] --> tally
+        tally --> RelationEqual: all equal
+        tally --> RelationSuperset: source had more ANYs
+        tally --> RelationSubset: target had more ANYs
+        tally --> RelationDisjoint: any mismatch
+        tally --> RelationOverlap: mixed ANY + mismatch
+    }
+
+    ... --> aggregate
+```
+
 ## 关键概念
 
 ### 1. 匹配类型

@@ -85,6 +85,40 @@ func main() {
 
 ## 与各模块的关系
 
+类图展示核心类型如何组合：CPE 2.3 字符串解绑为 `WFN`，两个 `WFN` 经 `CompareWFNs` 逐属性比较（返回属性映射）；`MatchCPE` 把整个比较包装成一个 bool。
+
+```mermaid
+classDiagram
+    class CPE {
+        +string Cpe23
+        +Part Part
+        +Vendor Vendor
+        +Product Product
+        +Version Version
+        ... 11 fields
+    }
+    class WFN {
+        +string Part
+        +string Vendor
+        +string Product
+        +string Version
+        ... 11 attributes
+    }
+    class Relation {
+        <<enumeration>>
+        Disjoint
+        Subset
+        Superset
+        Equal
+        Overlap
+        Unknown
+    }
+
+    CPE ..> WFN : UnbindURI(Cpe23)
+    WFN --> Relation : CompareAttributes returns int
+    CPE --> CPE : MatchCPE returns bool
+```
+
 - [Matching](../api/modules/matching.md) —— `CompareAttributes`、`CompareWFNs`、`CompareWFNRelation`、四个谓词。
 - [Advanced Matching](../api/modules/advanced-matching.md) —— 带扩展选项的 `AdvancedMatchCPE`。
 

@@ -85,6 +85,40 @@ Because `ANY` is the source of superset/subset, the practical rule is: **a CPE w
 
 ## Relationship to the modules
 
+The diagram shows how the core types compose: a CPE 2.3 string is unbound into a `WFN`, then two `WFN`s are compared attribute-by-attribute via `CompareWFNs` (returning a per-attribute map); `MatchCPE` wraps the whole comparison into a bool.
+
+```mermaid
+classDiagram
+    class CPE {
+        +string Cpe23
+        +Part Part
+        +Vendor Vendor
+        +Product Product
+        +Version Version
+        ... 11 fields
+    }
+    class WFN {
+        +string Part
+        +string Vendor
+        +string Product
+        +string Version
+        ... 11 attributes
+    }
+    class Relation {
+        <<enumeration>>
+        Disjoint
+        Subset
+        Superset
+        Equal
+        Overlap
+        Unknown
+    }
+
+    CPE ..> WFN : UnbindURI(Cpe23)
+    WFN --> Relation : CompareAttributes returns int
+    CPE --> CPE : MatchCPE returns bool
+```
+
 - [Matching](../api/modules/matching.md) — `CompareAttributes`, `CompareWFNs`, `CompareWFNRelation`, the four predicates.
 - [Advanced Matching](../api/modules/advanced-matching.md) — `AdvancedMatchCPE` with extended options.
 

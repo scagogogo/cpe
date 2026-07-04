@@ -30,6 +30,18 @@ outline: deep
 | `VEXVulnerableCodeCannotBeControlledByAdversary`     | 输入不可被攻击者控制                        |
 | `VEXInlineMitigationsExist`                          | 已有缓解措施                                |
 
+这些状态构成一个生命周期。新发现的 CVE 通常始于 `under_investigation`，随后转为 `affected` 或 `not_affected`；补丁发布后 `fixed` 是终态。
+
+```mermaid
+stateDiagram-v2
+    [*] --> under_investigation
+    under_investigation --> affected: triage finds exploitability
+    under_investigation --> not_affected: triage finds no impact
+    affected --> fixed: patch shipped
+    not_affected --> [*]: no action needed
+    fixed --> [*]: resolved
+```
+
 ## VEX 与 SBOM
 
 VEX 不替代 SBOM——它标注 SBOM。典型流程：构建 SBOM，运行漏洞匹配得到 findings，再产出一份 VEX 文档，把不可利用的 findings 从 affected 降级为 not_affected。

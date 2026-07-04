@@ -72,6 +72,28 @@ A 2.3 formatted string has 13 colon-separated fields. Only the first five (part,
 cpe:2.3:<part>:<vendor>:<product>:<version>:<update>:<edition>:<language>:<sw_edition>:<target_sw>:<target_hw>:<other>
 ```
 
+The mindmap below shows the three part types and the 11 logical attributes that follow:
+
+```mermaid
+mindmap
+  root((CPE 2.3))
+    part
+      a: application
+      o: operating system
+      h: hardware
+    attributes
+      vendor
+      product
+      version
+      update
+      edition
+      language
+      sw_edition
+      target_sw
+      target_hw
+      other
+```
+
 The 2.2 URI form packs the same logical fields into fewer slots; see [CPE 2.2 vs 2.3](./cpe-22-vs-23.md) for the mapping.
 
 ## Who maintains CPE

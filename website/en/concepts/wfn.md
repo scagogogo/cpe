@@ -81,6 +81,37 @@ func main() {
 
 ## Relationship to the modules
 
+The class diagram shows the WFN struct and the two-way conversion between CPE strings and WFNs. `FromCPE` extracts attributes; `BindToFS`/`BindToURI` serialize back.
+
+```mermaid
+classDiagram
+    class WFN {
+        +string Part
+        +string Vendor
+        +string Product
+        +string Version
+        +string Update
+        +string Edition
+        +string Language
+        +string SoftwareEdition
+        +string TargetSoftware
+        +string TargetHardware
+        +string Other
+    }
+
+    class CPE
+
+    WFN <-- CPE : FromCPE
+    WFN --> CPE : BindToFS / BindToURI
+
+    class `string` {
+        <<external>>
+    }
+
+    WFN <-- `string` : UnbindFS / UnbindURI
+    WFN --> `string` : BindToFS / BindToURI
+```
+
 - [WFN](../api/modules/wfn.md) — the `WFN` struct, `FromCPE`, `NewWFN`.
 - [Binding](../api/modules/binding.md) — `BindToFS`, `BindToURI`, unbind and convert functions.
 - [Matching](../api/modules/matching.md) — `CompareAttributes`, the consumer of WFN comparison.

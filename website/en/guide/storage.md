@@ -309,6 +309,41 @@ All storage implementations follow the same interface, making them interchangeab
 - Implements caching strategies
 - Provides unified interface
 
+```mermaid
+classDiagram
+    class Storage {
+        <<interface>>
+        +Initialize() error
+        +Close() error
+        +StoreCPE(*CPE) error
+        +RetrieveCPE(id) (*CPE, error)
+        +SearchCPE(*CPE, *MatchOptions) []*CPE
+        +StoreCVE(*CVEReference) error
+        +FindCVEsByCPE(*CPE) []*CVEReference
+    }
+    class MemoryStorage {
+        +NewMemoryStorage()
+    }
+    class FileStorage {
+        +NewFileStorage(baseDir, useCache)
+    }
+    class CPEIndex {
+        +NewCPEIndex(cpes)
+        +Lookup()
+    }
+    class StorageManager {
+        +NewStorageManager(primary)
+        +SetCache(Storage)
+        +GetCPE / StoreCPE
+    }
+
+    Storage <|.. MemoryStorage
+    Storage <|.. FileStorage
+    StorageManager o-- Storage : primary
+    StorageManager o-- Storage : cache
+    CPEIndex ..> Storage : pre-indexed lookup
+```
+
 ## Best Practices
 
 1. **Enable caching** for file storage in production

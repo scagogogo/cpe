@@ -81,6 +81,37 @@ func main() {
 
 ## 与各模块的关系
 
+类图展示 WFN 结构体以及 CPE 字符串与 WFN 之间的双向转换。`FromCPE` 抽取属性；`BindToFS`/`BindToURI` 序列化回去。
+
+```mermaid
+classDiagram
+    class WFN {
+        +string Part
+        +string Vendor
+        +string Product
+        +string Version
+        +string Update
+        +string Edition
+        +string Language
+        +string SoftwareEdition
+        +string TargetSoftware
+        +string TargetHardware
+        +string Other
+    }
+
+    class CPE
+
+    WFN <-- CPE : FromCPE
+    WFN --> CPE : BindToFS / BindToURI
+
+    class `string` {
+        <<external>>
+    }
+
+    WFN <-- `string` : UnbindFS / UnbindURI
+    WFN --> `string` : BindToFS / BindToURI
+```
+
 - [WFN](../api/modules/wfn.md) —— `WFN` 结构体、`FromCPE`、`NewWFN`。
 - [Binding](../api/modules/binding.md) —— `BindToFS`、`BindToURI`、解绑定与转换函数。
 - [Matching](../api/modules/matching.md) —— `CompareAttributes`，WFN 比较的消费者。

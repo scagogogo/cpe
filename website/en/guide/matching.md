@@ -205,6 +205,37 @@ Testing pattern: cpe:2.3:a:microsoft:*:*:*:*:*:*:*:*:*
   3. cpe:2.3:a:microsoft:office:2019:*:*:*:*:*:*:*: true
 ```
 
+## Match decision state machine
+
+The matching process is a state machine: each attribute comparison moves the relation toward one of the six outcomes. The diagram below shows how `ANY` and `NA` drive the transitions:
+
+```mermaid
+stateDiagram-v2
+    [*] --> compare_attr_1
+    compare_attr_1 --> compare_attr_2: equal
+    compare_attr_1 --> mark_superset: source ANY
+    compare_attr_1 --> mark_subset: target ANY
+    compare_attr_1 --> mark_disjoint: mismatch (neither ANY)
+
+    compare_attr_2 --> compare_attr_3: equal
+    compare_attr_2 --> update_superset: source ANY
+    compare_attr_2 --> update_subset: target ANY
+    compare_attr_2 --> mark_disjoint: mismatch
+
+    compare_attr_3 --> ... : ... (11 fields)
+
+    state aggregate {
+        [*] --> tally
+        tally --> RelationEqual: all equal
+        tally --> RelationSuperset: source had more ANYs
+        tally --> RelationSubset: target had more ANYs
+        tally --> RelationDisjoint: any mismatch
+        tally --> RelationOverlap: mixed ANY + mismatch
+    }
+
+    ... --> aggregate
+```
+
 ## Key Concepts
 
 ### 1. Wildcard Matching

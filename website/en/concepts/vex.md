@@ -30,6 +30,18 @@ A `not_affected` statement must carry a **justification** explaining why. The li
 | `VEXVulnerableCodeCannotBeControlledByAdversary`    | Input cannot be controlled by an attacker          |
 | `VEXInlineMitigationsExist`                         | A mitigation is already in place                   |
 
+The statuses form a lifecycle. A newly discovered CVE typically starts `under_investigation`, then moves to `affected` or `not_affected`; `fixed` is the terminal state once a patch ships.
+
+```mermaid
+stateDiagram-v2
+    [*] --> under_investigation
+    under_investigation --> affected: triage finds exploitability
+    under_investigation --> not_affected: triage finds no impact
+    affected --> fixed: patch shipped
+    not_affected --> [*]: no action needed
+    fixed --> [*]: resolved
+```
+
 ## VEX and SBOM
 
 VEX does not replace an SBOM — it annotates it. The typical flow is: build the SBOM, run vulnerability matching to get findings, then produce a VEX document that downgrades the non-exploitable findings from "affected" to "not_affected".

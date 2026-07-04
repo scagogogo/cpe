@@ -89,6 +89,45 @@ flowchart LR
     K --> R
 ```
 
+## Request lifecycle
+
+The pipeline above looks linear, but the NVD fetch and the enrichment fan out at specific moments. The sequence diagram shows where caching short-circuits the slow path:
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant SDK as cpeskills
+    participant NVD as NVD feeds
+    participant EPSS as EPSS API
+    participant KEV as KEV list
+
+    Caller->>SDK: Parse(cpeStr)
+    SDK-->>Caller: *CPE
+
+    Caller->>SDK: DownloadAllNVDData(opts)
+    alt cache miss
+        SDK->>NVD: GET feeds (gzip)
+        NVD-->>SDK: ~hundreds of MB
+        SDK->>SDK: write CacheDir
+    else cache hit
+        SDK->>SDK: read CacheDir (fresh)
+    end
+    SDK-->>Caller: nvdData
+
+    Caller->>SDK: FindCVEsForCPE(cpe, nvdData)
+    SDK-->>Caller: []CVE IDs
+
+    par enrich in parallel
+        Caller->>EPSS: GetScore(cveID)
+        EPSS-->>Caller: 0-1 score
+    and
+        Caller->>KEV: IsListed(cveID)
+        KEV-->>Caller: bool
+    end
+
+    Caller-->>Caller: sort by EPSS+KEV
+```
+
 ## Expected output
 
 ```

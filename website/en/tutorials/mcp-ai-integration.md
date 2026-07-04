@@ -85,6 +85,34 @@ flowchart LR
 | `generate_cpe` | part, vendor, product, version | a CPE 2.3 URI |
 | `compare_versions` | two version strings | ordering (`-1`/`0`/`1`) |
 
+## JSON-RPC sequence
+
+The flowchart shows the static topology; the sequence diagram shows the actual request/response pattern over stdio:
+
+```mermaid
+sequenceDiagram
+    participant AI as AI client
+    participant MCP as cpe mcp serve
+
+    AI->>MCP: initialize request
+    MCP-->>AI: initialize response (capabilities)
+
+    AI->>MCP: tools/list request
+    MCP-->>AI: tools/list response (6 tools)
+
+    loop for each user query
+        AI->>MCP: tools/call "parse_cpe"
+        MCP->>MCP: cpeskills.MustParse()
+        MCP-->>AI: {part, vendor, product, ...}
+
+        AI->>MCP: tools/call "match_cpe"
+        MCP->>MCP: cpeskills.Match()
+        MCP-->>AI: {match: true}
+    end
+
+    Note over AI,MCP: All traffic is newline-delimited JSON on stdin/stdout
+```
+
 ## Expected behavior
 
 After restart, the cpe-skills server is listed in Claude Desktop's connectors panel. Asking it to "generate a CPE for Apache log4j 2.14.0" yields:

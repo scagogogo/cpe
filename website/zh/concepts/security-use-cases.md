@@ -7,6 +7,15 @@ outline: deep
 
 `cpeskills` SDK 旨在回答四个安全问题：*我有什么？什么有漏洞？多严重？怎么办？* 下面每个用例都对应到具体 API 路径。
 
+```mermaid
+pie showData
+  title Security workflows by weight
+  "Vulnerability management" : 40
+  "Risk scoring + EPSS" : 25
+  "SBOM generation" : 20
+  "Compliance + VEX" : 15
+```
+
 ## 漏洞管理
 
 拿资产清单，逐项匹配 NVD 已知受影响 CPE 列表，产出 finding。`DownloadAllNVDData` 一次性载入数据源；`FindCVEsForCPE` 离线查询。
