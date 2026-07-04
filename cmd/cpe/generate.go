@@ -66,6 +66,6 @@ func runGenerate(cmd *cobra.Command, args []string) error {
 	if outputFormat == "json" {
 		return outputCPE(cmd.OutOrStdout(), c, "json")
 	}
-	fmt.Println(c.GetURI())
+	fmt.Fprintln(cmd.OutOrStdout(), c.GetURI())
 	return nil
 }

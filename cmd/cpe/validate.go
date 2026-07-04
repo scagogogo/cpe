@@ -44,11 +44,11 @@ func runValidate(cmd *cobra.Command, args []string) error {
 
 	if outputFormat == "json" {
 		if valid {
-			fmt.Printf(`{"valid": true, "cpe": "%s"}`, c.GetURI())
+			fmt.Fprintf(cmd.OutOrStdout(), `{"valid": true, "cpe": "%s"}`, c.GetURI())
 		} else {
-			fmt.Printf(`{"valid": false, "cpe": "%s", "error": "%s"}`, c.GetURI(), verr.Error())
+			fmt.Fprintf(cmd.OutOrStdout(), `{"valid": false, "cpe": "%s", "error": "%s"}`, c.GetURI(), verr.Error())
 		}
-		fmt.Println()
+		fmt.Fprintln(cmd.OutOrStdout())
 		return nil
 	}
 

@@ -68,8 +68,8 @@ func runVcmpCompare(cmd *cobra.Command, args []string) error {
 	result := cpeskills.CompareVersions(args[0], args[1])
 
 	if outputFormat == "json" {
-		fmt.Printf(`{"a": "%s", "b": "%s", "result": %d}`, args[0], args[1], result)
-		fmt.Println()
+		fmt.Fprintf(cmd.OutOrStdout(), `{"a": "%s", "b": "%s", "result": %d}`, args[0], args[1], result)
+		fmt.Fprintln(cmd.OutOrStdout())
 		return nil
 	}
 
@@ -94,8 +94,8 @@ func runVcmpInRange(cmd *cobra.Command, args []string) error {
 	result := cpeskills.IsVersionInRange(v, inRangeMin, inRangeMax)
 
 	if outputFormat == "json" {
-		fmt.Printf(`{"version": "%s", "min": "%s", "max": "%s", "in_range": %t}`, v, inRangeMin, inRangeMax, result)
-		fmt.Println()
+		fmt.Fprintf(cmd.OutOrStdout(), `{"version": "%s", "min": "%s", "max": "%s", "in_range": %t}`, v, inRangeMin, inRangeMax, result)
+		fmt.Fprintln(cmd.OutOrStdout())
 		return nil
 	}
 
