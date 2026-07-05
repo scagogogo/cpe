@@ -62,13 +62,13 @@ func runMatch(cmd *cobra.Command, args []string) error {
 	result := cpeskills.MatchCPE(criteria, target, options)
 
 	if outputFormat == "json" {
-		fmt.Printf(`{"match": %t, "criteria": "%s", "target": "%s"}`, result, criteria.GetURI(), target.GetURI())
-		fmt.Println()
+		fmt.Fprintf(cmd.OutOrStdout(), `{"match": %t, "criteria": "%s", "target": "%s"}`, result, criteria.GetURI(), target.GetURI())
+		fmt.Fprintln(cmd.OutOrStdout())
 	} else {
 		if result {
-			fmt.Printf("MATCH: %s matches %s\n", criteria.GetURI(), target.GetURI())
+			fmt.Fprintf(cmd.OutOrStdout(), "MATCH: %s matches %s\n", criteria.GetURI(), target.GetURI())
 		} else {
-			fmt.Printf("NO MATCH: %s does not match %s\n", criteria.GetURI(), target.GetURI())
+			fmt.Fprintf(cmd.OutOrStdout(), "NO MATCH: %s does not match %s\n", criteria.GetURI(), target.GetURI())
 		}
 	}
 

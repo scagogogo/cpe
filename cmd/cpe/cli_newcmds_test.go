@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -387,5 +388,254 @@ func TestCLI_NetCmds_HelpRegistered(t *testing.T) {
 		if !strings.Contains(out, "Usage") {
 			t.Errorf("cpe %s --help missing Usage: %s", cmd, out)
 		}
+	}
+}
+
+// ---- 既有核心命令的执行路径覆盖 ----
+
+func TestCLI_Parse_Text(t *testing.T) {
+	out, err := runCLI(t, "parse", "cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "microsoft") || !strings.Contains(out, "windows") {
+		t.Errorf("expected components in output, got: %s", out)
+	}
+}
+
+func TestCLI_Parse_ConvertTo22(t *testing.T) {
+	out, err := runCLI(t, "parse", "-t", "2.2", "cpe:2.3:a:apache:log4j:2.0:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(strings.TrimSpace(out), "cpe:/") {
+		t.Errorf("expected cpe:/ prefix, got: %s", out)
+	}
+}
+
+func TestCLI_Parse_ConvertTo23(t *testing.T) {
+	out, err := runCLI(t, "parse", "-t", "2.3", "cpe:/a:apache:log4j:2.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.HasPrefix(strings.TrimSpace(out), "cpe:2.3:") {
+		t.Errorf("expected cpe:2.3: prefix, got: %s", out)
+	}
+}
+
+func TestCLI_Parse_ConvertToWFN(t *testing.T) {
+	out, err := runCLI(t, "parse", "-t", "wfn", "cpe:/a:apache:log4j:2.0")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "wfn:[part=") {
+		t.Errorf("expected wfn:[ prefix, got: %s", out)
+	}
+}
+
+func TestCLI_Parse_UnsupportedFormat(t *testing.T) {
+	_, err := runCLI(t, "parse", "-t", "xml", "cpe:/a:apache:log4j:2.0")
+	if err == nil {
+		t.Error("expected error for unsupported format, got nil")
+	}
+}
+
+func TestCLI_Match_Positive(t *testing.T) {
+	out, err := runCLI(t, "match",
+		"cpe:2.3:a:microsoft:windows:*:*:*:*:*:*:*:*",
+		"cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "MATCH") {
+		t.Errorf("expected MATCH, got: %s", out)
+	}
+}
+
+func TestCLI_Match_Negative(t *testing.T) {
+	out, err := runCLI(t, "match",
+		"cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*",
+		"cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "NO MATCH") {
+		t.Errorf("expected NO MATCH, got: %s", out)
+	}
+}
+
+func TestCLI_Match_JSON(t *testing.T) {
+	out, err := runCLIJSON(t, "match",
+		"cpe:2.3:a:microsoft:windows:*:*:*:*:*:*:*:*",
+		"cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	if result["match"] != true {
+		t.Errorf("expected match=true, got: %v", result["match"])
+	}
+}
+
+func TestCLI_Search_Text(t *testing.T) {
+	cpes := "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*\ncpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*\ncpe:2.3:a:nginx:nginx:1.18:*:*:*:*:*:*:*\n"
+	tmp := filepath.Join(t.TempDir(), "cpes.txt")
+	if err := os.WriteFile(tmp, []byte(cpes), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLI(t, "search", "--file", tmp, "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "log4j") {
+		t.Errorf("expected log4j in results, got: %s", out)
+	}
+	if strings.Contains(out, "windows") {
+		t.Errorf("windows should not match, got: %s", out)
+	}
+}
+
+func TestCLI_Search_JSON(t *testing.T) {
+	cpes := "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*\n"
+	tmp := filepath.Join(t.TempDir(), "cpes.txt")
+	if err := os.WriteFile(tmp, []byte(cpes), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLIJSON(t, "search", "--file", tmp, "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var arr []string
+	if err := json.Unmarshal([]byte(out), &arr); err != nil {
+		t.Fatalf("invalid JSON array: %v\n%s", err, out)
+	}
+	if len(arr) == 0 {
+		t.Error("expected non-empty results")
+	}
+}
+
+// ---- VEX（可离线：build + parse 往返） ----
+
+func TestCLI_VEX_Build_Text(t *testing.T) {
+	out, err := runCLI(t, "vex", "build",
+		"--product", "MyApp",
+		"--cve", "CVE-2021-44228",
+		"--status", "not_affected",
+		"--justification", "component_not_present")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "MyApp") || !strings.Contains(out, "not_affected") {
+		t.Errorf("expected product and status in output, got: %s", out)
+	}
+}
+
+func TestCLI_VEX_Build_JSON(t *testing.T) {
+	out, err := runCLIJSON(t, "vex", "build",
+		"--product", "MyApp",
+		"--cve", "CVE-2021-44228",
+		"--status", "affected")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var doc map[string]interface{}
+	if err := json.Unmarshal([]byte(out), &doc); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	if doc["productName"] != "MyApp" {
+		t.Errorf("expected productName=MyApp, got: %v", doc["productName"])
+	}
+}
+
+func TestCLI_VEX_Build_ThenParse(t *testing.T) {
+	out, err := runCLIJSON(t, "vex", "build",
+		"--product", "MyApp",
+		"--cve", "CVE-2021-44228",
+		"--status", "not_affected",
+		"--justification", "component_not_present")
+	if err != nil {
+		t.Fatalf("build failed: %v", err)
+	}
+	tmp := filepath.Join(t.TempDir(), "vex.json")
+	if err := os.WriteFile(tmp, []byte(out), 0644); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := runCLIJSON(t, "vex", "parse", tmp)
+	if err != nil {
+		t.Fatalf("parse failed: %v", err)
+	}
+	var doc map[string]interface{}
+	if err := json.Unmarshal([]byte(parsed), &doc); err != nil {
+		t.Fatalf("parse output invalid JSON: %v\n%s", err, parsed)
+	}
+	if doc["productName"] != "MyApp" {
+		t.Errorf("expected round-trip productName=MyApp, got: %v", doc["productName"])
+	}
+}
+
+// ---- SBOM from-manifest（可离线：go.mod） ----
+
+func TestCLI_SBOM_FromManifest(t *testing.T) {
+	// 用仓库根的 go.mod（cmd/cpe 的上两级）
+	goMod := filepath.Join("..", "..", "go.mod")
+	out, err := runCLI(t, "sbom", "from-manifest", goMod)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "Components:") {
+		t.Errorf("expected components list, got: %s", out)
+	}
+}
+
+// ---- Applicability filter（可离线） ----
+
+func TestCLI_Applicability_Filter(t *testing.T) {
+	cpes := "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*\ncpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*\n"
+	tmp := filepath.Join(t.TempDir(), "cpes.txt")
+	if err := os.WriteFile(tmp, []byte(cpes), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLI(t, "applicability", "filter",
+		"cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
+		"--file", tmp)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "log4j") {
+		t.Errorf("expected log4j to pass filter, got: %s", out)
+	}
+	if strings.Contains(out, "windows") {
+		t.Errorf("windows should be filtered out, got: %s", out)
+	}
+}
+
+// ---- WFN from-fs（可离线） ----
+
+func TestCLI_WFN_FromFS(t *testing.T) {
+	out, err := runCLI(t, "wfn", "from-fs", "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "apache") || !strings.Contains(out, "log4j") {
+		t.Errorf("expected apache/log4j, got: %s", out)
+	}
+}
+
+// ---- Store list ----
+
+func TestCLI_Store_List(t *testing.T) {
+	tmpDir := t.TempDir()
+	if _, err := runCLI(t, "store", "init", "--dir", tmpDir); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	out, err := runCLI(t, "store", "list", "--dir", tmpDir)
+	if err != nil {
+		t.Fatalf("list failed: %v", err)
+	}
+	if !strings.Contains(out, tmpDir) {
+		t.Errorf("expected dir path in list output, got: %s", out)
 	}
 }

@@ -84,14 +84,15 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// 输出结果
 	if outputFormat == "json" {
-		fmt.Printf("[")
+		w := cmd.OutOrStdout()
+		fmt.Fprintf(w, "[")
 		for i, m := range matches {
 			if i > 0 {
-				fmt.Printf(", ")
+				fmt.Fprintf(w, ", ")
 			}
-			fmt.Printf(`"%s"`, m.GetURI())
+			fmt.Fprintf(w, `"%s"`, m.GetURI())
 		}
-		fmt.Printf("]\n")
+		fmt.Fprintf(w, "]\n")
 	} else {
 		fmt.Fprintf(cmd.OutOrStdout(), "Found %d matching CPE(s):\n", len(matches))
 		for i, m := range matches {

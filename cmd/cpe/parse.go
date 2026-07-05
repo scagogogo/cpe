@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 
 	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/spf13/cobra"
@@ -40,7 +41,7 @@ func runParse(cmd *cobra.Command, args []string) error {
 
 	// 如果指定了转换格式，先输出转换结果
 	if parseFormat != "" {
-		return outputConversion(c, parseFormat)
+		return outputConversion(cmd.OutOrStdout(), c, parseFormat)
 	}
 
 	return outputCPE(cmd.OutOrStdout(), c, outputFormat)
@@ -58,15 +59,15 @@ func parseCPEString(input string) (*cpeskills.CPE, error) {
 }
 
 // outputConversion 输出格式转换结果
-func outputConversion(c *cpeskills.CPE, format string) error {
+func outputConversion(w io.Writer, c *cpeskills.CPE, format string) error {
 	switch format {
 	case "2.2":
-		fmt.Println(cpeskills.FormatCpe22(c))
+		fmt.Fprintln(w, cpeskills.FormatCpe22(c))
 	case "2.3":
-		fmt.Println(cpeskills.FormatCpe23(c))
+		fmt.Fprintln(w, cpeskills.FormatCpe23(c))
 	case "wfn":
 		wfn := cpeskills.FromCPE(c)
-		fmt.Printf("wfn:[part=%s,vendor=%s,product=%s,version=%s,update=%s,edition=%s,language=%s]\n",
+		fmt.Fprintf(w, "wfn:[part=%s,vendor=%s,product=%s,version=%s,update=%s,edition=%s,language=%s]\n",
 			wfn.Part, wfn.Vendor, wfn.Product, wfn.Version, wfn.Update, wfn.Edition, wfn.Language)
 	default:
 		return fmt.Errorf("unsupported conversion format: %s (supported: 2.2, 2.3, wfn)", format)
