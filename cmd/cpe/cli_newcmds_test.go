@@ -17,13 +17,33 @@ func runCLI(t *testing.T, args ...string) (string, error) {
 	outputFormat = "text"
 
 	// 重置各命令共享的包级 flag，保证测试间隔离（cobra 重复 Execute
-	// 不会自动复位 BoolVar/StringVar）。
+	// 不会自动复位 BoolVar/StringVar）。某测试设过的 flag 值若不清零，
+	// 会在后续不传该 flag 的测试中残留，导致走错分支。
 	origCyclone, origSPDX, origOut := sbomCycloneDX, sbomSPDX, sbomOutFile
 	defer func() { sbomCycloneDX, sbomSPDX, sbomOutFile = origCyclone, origSPDX, origOut }()
 	sbomCycloneDX, sbomSPDX, sbomOutFile = false, false, ""
 	origExportOut := exportOutFile
 	defer func() { exportOutFile = origExportOut }()
 	exportOutFile = ""
+
+	// generate / search / risk / store 的命令专属 flag 同样需复位。
+	origGen := [5]any{genPart, genVendor, genProduct, genVersion, genFillDefaults}
+	defer func() {
+		genPart, genVendor, genProduct, genVersion = origGen[0].(string), origGen[1].(string), origGen[2].(string), origGen[3].(string)
+		genFillDefaults = origGen[4].(bool)
+	}()
+	genPart, genVendor, genProduct, genVersion, genFillDefaults = "", "", "", "", false
+	origSearch := [3]any{searchInputFile, searchAdvanced, searchFuzzy}
+	defer func() {
+		searchInputFile, searchAdvanced, searchFuzzy = origSearch[0].(string), origSearch[1].(bool), origSearch[2].(bool)
+	}()
+	searchInputFile, searchAdvanced, searchFuzzy = "", false, false
+	origRisk := [3]string{riskSBOMFile, riskNVDFile, riskPriority}
+	defer func() { riskSBOMFile, riskNVDFile, riskPriority = origRisk[0], origRisk[1], origRisk[2] }()
+	riskSBOMFile, riskNVDFile, riskPriority = "", "", ""
+	origStoreDir := storeDir
+	defer func() { storeDir = origStoreDir }()
+	storeDir = ""
 
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
