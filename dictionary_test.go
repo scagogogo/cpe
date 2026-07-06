@@ -973,3 +973,22 @@ func TestDictionary_CPEDictionary_Struct(t *testing.T) {
 
 // Suppress unused import
 var _ = xml.Header
+
+// TestDictionary_FindItemsByCriteria_NilOptions 验证 options=nil 不 panic（用默认）。
+// 回归测试：此前 matchCPE 解引用 nil options.UseRegex 导致 SIGSEGV。
+func TestDictionary_FindItemsByCriteria_NilOptions(t *testing.T) {
+	cpe, err := Parse("cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	dict := &CPEDictionary{
+		Items: []*CPEItem{
+			{Name: "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*", CPE: cpe, Title: "Apache Log4j 2.14"},
+		},
+	}
+	// 不应 panic，且应命中。
+	items := dict.FindItemsByCriteria(cpe, nil)
+	if len(items) != 1 {
+		t.Fatalf("expected 1 match with nil options, got %d", len(items))
+	}
+}

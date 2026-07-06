@@ -91,7 +91,7 @@ func runDictSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("parsing criteria CPE: %w", err)
 	}
 
-	items := dict.FindItemsByCriteria(criteria, nil)
+	items := dict.FindItemsByCriteria(criteria, cpeskills.DefaultMatchOptions())
 
 	fmt.Fprintf(cmd.OutOrStdout(), "Found %d matching item(s):\n", len(items))
 	for i, item := range items {

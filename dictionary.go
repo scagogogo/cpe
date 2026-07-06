@@ -293,7 +293,12 @@ func (d *CPEDictionary) FindItemByName(name string) *CPEItem {
 }
 
 // FindItemsByCriteria 根据条件查找字典项
+//
+// 若 options 为 nil，使用 DefaultMatchOptions()。
 func (d *CPEDictionary) FindItemsByCriteria(criteria *CPE, options *MatchOptions) []*CPEItem {
+	if options == nil {
+		options = DefaultMatchOptions()
+	}
 	var results []*CPEItem
 
 	for _, item := range d.Items {

@@ -865,3 +865,50 @@ func TestCLI_NVDFixture_Helpers(t *testing.T) {
 		t.Errorf("unexpected bomFormat: %v", v["bomFormat"])
 	}
 }
+
+// ---- dict parse/search（离线，最小 XML 夹具） ----
+
+const dictFixtureXML = `<?xml version="1.0" encoding="UTF-8"?>
+<cpe-list xmlns="http://cpe.mitre.org/dictionary/2.0" schema_version="2.0">
+  <cpe-item name="cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*">
+    <title xml:lang="en-US">Apache Log4j 2.14</title>
+  </cpe-item>
+  <cpe-item name="cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*">
+    <title xml:lang="en-US">Microsoft Windows 10</title>
+  </cpe-item>
+</cpe-list>
+`
+
+func writeDictFixture(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "dict.xml")
+	if err := os.WriteFile(path, []byte(dictFixtureXML), 0644); err != nil {
+		t.Fatalf("write dict fixture: %v", err)
+	}
+	return path
+}
+
+func TestCLI_Dict_Parse(t *testing.T) {
+	xml := writeDictFixture(t)
+	out, err := runCLI(t, "dict", "parse", xml)
+	if err != nil {
+		t.Fatalf("dict parse: %v", err)
+	}
+	if !strings.Contains(out, "Items:") || !strings.Contains(out, "apache") {
+		t.Errorf("expected items list with apache, got: %s", out)
+	}
+}
+
+func TestCLI_Dict_Search(t *testing.T) {
+	xml := writeDictFixture(t)
+	out, err := runCLI(t, "dict", "search", xml, "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*")
+	if err != nil {
+		t.Fatalf("dict search: %v", err)
+	}
+	if !strings.Contains(out, "Found 1 matching") {
+		t.Errorf("expected 1 match, got: %s", out)
+	}
+	if !strings.Contains(out, "log4j") {
+		t.Errorf("expected log4j in results, got: %s", out)
+	}
+}
