@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	cpeskills "github.com/scagogogo/cpe-skills"
 )
 
 // makeToolReq builds a CallToolRequest with the given JSON arguments.
@@ -36,9 +36,9 @@ func textOf(t *testing.T, r *mcp.CallToolResult) string {
 func TestDetectFormat(t *testing.T) {
 	tests := map[string]string{
 		"cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*": "2.3",
-		"cpe:/a:apache:log4j:2.0":                     "2.2",
-		"not-a-cpe":                                   "unknown",
-		"":                                            "unknown",
+		"cpe:/a:apache:log4j:2.0":                      "2.2",
+		"not-a-cpe":                                    "unknown",
+		"":                                             "unknown",
 	}
 	for in, want := range tests {
 		if got := detectFormat(in); got != want {

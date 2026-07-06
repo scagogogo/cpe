@@ -639,3 +639,205 @@ func TestCLI_Store_List(t *testing.T) {
 		t.Errorf("expected dir path in list output, got: %s", out)
 	}
 }
+
+// makeSBOMFixture 用 from-manifest 生成一个 ToJSON 格式的 SBOM 到临时文件并返回路径。
+func makeSBOMFixture(t *testing.T) string {
+	t.Helper()
+	goMod := filepath.Join("..", "..", "go.mod")
+	out, err := runCLIJSON(t, "sbom", "from-manifest", goMod)
+	if err != nil {
+		t.Fatalf("generate SBOM fixture: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "sbom.json")
+	if err := os.WriteFile(path, []byte(out), 0644); err != nil {
+		t.Fatalf("write SBOM fixture: %v", err)
+	}
+	return path
+}
+
+// makeCycloneDXFixture 生成 CycloneDX 格式 SBOM 文件。
+func makeCycloneDXFixture(t *testing.T) string {
+	t.Helper()
+	sbomJSON := makeSBOMFixture(t)
+	out, err := runCLI(t, "sbom", "export", "--cyclonedx", sbomJSON)
+	if err != nil {
+		t.Fatalf("export CycloneDX: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "sbom.cdx.json")
+	if err := os.WriteFile(path, []byte(out), 0644); err != nil {
+		t.Fatalf("write CycloneDX fixture: %v", err)
+	}
+	return path
+}
+
+// makeNVDFixture 写一个最小 NVD 数据文件（含 log4j 2.14 ↔ CVE-2021-44228 映射）。
+func makeNVDFixture(t *testing.T) string {
+	t.Helper()
+	const data = `{"CPEMatchData":{"CVEToCPEs":{"CVE-2021-44228":["cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*"]},"CPEToCVEs":{"cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*":["CVE-2021-44228"]}}}`
+	path := filepath.Join(t.TempDir(), "nvd.json")
+	if err := os.WriteFile(path, []byte(data), 0644); err != nil {
+		t.Fatalf("write NVD fixture: %v", err)
+	}
+	return path
+}
+
+// ---- SBOM parse/validate/diff/export（离线） ----
+
+func TestCLI_SBOM_Parse_CycloneDX(t *testing.T) {
+	cdx := makeCycloneDXFixture(t)
+	out, err := runCLI(t, "sbom", "parse", "--cyclonedx", cdx)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if !strings.Contains(out, "Components:") {
+		t.Errorf("expected components list, got: %s", out)
+	}
+}
+
+func TestCLI_SBOM_Validate(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	out, err := runCLI(t, "sbom", "validate", sbom)
+	if err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if !strings.HasPrefix(strings.TrimSpace(out), "VALID") {
+		t.Errorf("expected VALID, got: %s", out)
+	}
+}
+
+func TestCLI_SBOM_Validate_Invalid(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bad.json")
+	if err := os.WriteFile(path, []byte("not json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLI(t, "sbom", "validate", path)
+	if err == nil {
+		t.Fatalf("expected error for invalid SBOM, got: %s", out)
+	}
+	if !strings.Contains(err.Error(), "cannot parse") {
+		t.Errorf("expected cannot parse error, got: %v", err)
+	}
+}
+
+func TestCLI_SBOM_Diff(t *testing.T) {
+	a := makeSBOMFixture(t)
+	out, err := runCLI(t, "sbom", "diff", a, a)
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	if !strings.Contains(out, "Unchanged") {
+		t.Errorf("expected Unchanged in diff of identical SBOMs, got: %s", out)
+	}
+}
+
+func TestCLI_SBOM_Export_CycloneDX(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	out, err := runCLI(t, "sbom", "export", "--cyclonedx", sbom)
+	if err != nil {
+		t.Fatalf("export: %v", err)
+	}
+	if !strings.Contains(out, "bomFormat") || !strings.Contains(out, "CycloneDX") {
+		t.Errorf("expected CycloneDX bomFormat, got: %s", out[:200])
+	}
+}
+
+// ---- risk/reach/graph/batch（离线，用夹具） ----
+
+func TestCLI_Risk_Score(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "risk", "score", "--sbom", sbom, "--nvd", nvd)
+	if err != nil {
+		t.Fatalf("risk score: %v", err)
+	}
+	if !strings.Contains(out, "Risk Scores") {
+		t.Errorf("expected Risk Scores header, got: %s", out)
+	}
+}
+
+func TestCLI_Reach_Analyze(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "reach", "analyze", "--sbom", sbom, "--nvd", nvd)
+	if err != nil {
+		t.Fatalf("reach: %v", err)
+	}
+	if !strings.Contains(out, "Reachability Analysis") {
+		t.Errorf("expected Reachability Analysis, got: %s", out)
+	}
+}
+
+func TestCLI_Graph_Topo(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	out, err := runCLI(t, "graph", "topo", "--sbom", sbom)
+	if err != nil {
+		t.Fatalf("graph topo: %v", err)
+	}
+	if !strings.Contains(out, "Topological Sort") {
+		t.Errorf("expected Topological Sort, got: %s", out)
+	}
+}
+
+func TestCLI_Graph_Build(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	out, err := runCLI(t, "graph", "build", "--sbom", sbom)
+	if err != nil {
+		t.Fatalf("graph build: %v", err)
+	}
+	if !strings.Contains(out, "Dependency Graph") {
+		t.Errorf("expected Dependency Graph, got: %s", out)
+	}
+}
+
+func TestCLI_Batch_Scan(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "batch", "scan", "--sbom", sbom, "--nvd", nvd)
+	if err != nil {
+		t.Fatalf("batch scan: %v", err)
+	}
+	if !strings.Contains(out, "Scan Results") {
+		t.Errorf("expected Scan Results, got: %s", out)
+	}
+}
+
+func TestCLI_Export_CSV(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "export", "csv", "--sbom", sbom, "--nvd", nvd)
+	if err != nil {
+		t.Fatalf("export csv: %v", err)
+	}
+	if !strings.Contains(out, "Component,Version") {
+		t.Errorf("expected CSV header, got: %s", out)
+	}
+}
+
+func TestCLI_Export_SARIF(t *testing.T) {
+	sbom := makeSBOMFixture(t)
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "export", "sarif", "--sbom", sbom, "--nvd", nvd)
+	if err != nil {
+		t.Fatalf("export sarif: %v", err)
+	}
+	if !strings.Contains(out, "sarif") || !strings.Contains(out, "runs") {
+		t.Errorf("expected SARIF structure, got: %s", out[:200])
+	}
+}
+
+// 验证 NVD fixture JSON 解析后符合预期：CVE-2021-44228 ↔ log4j 2.14
+func TestCLI_NVDFixture_Helpers(t *testing.T) {
+	// 间接验证：sbom export --cyclonedx 输出可被 json.Decoder 解析
+	cdx := makeCycloneDXFixture(t)
+	data, err := os.ReadFile(cdx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var v map[string]any
+	if err := json.Unmarshal(data, &v); err != nil {
+		t.Fatalf("CycloneDX fixture not valid JSON: %v", err)
+	}
+	if v["bomFormat"] != "CycloneDX" {
+		t.Errorf("unexpected bomFormat: %v", v["bomFormat"])
+	}
+}

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/spf13/cobra"
 )
 

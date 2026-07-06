@@ -63,8 +63,8 @@ func runCPEToPURL(cmd *cobra.Command, args []string) error {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]interface{}{
-			"cpe":       cpe.GetURI(),
-			"purl":      purl.String(),
+			"cpe":        cpe.GetURI(),
+			"purl":       purl.String(),
 			"confidence": confidence,
 		})
 	}
@@ -89,8 +89,8 @@ func runPURLToCPE(cmd *cobra.Command, args []string) error {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]interface{}{
-			"purl":      purl.String(),
-			"cpe":       cpe.GetURI(),
+			"purl":       purl.String(),
+			"cpe":        cpe.GetURI(),
 			"confidence": confidence,
 		})
 	}

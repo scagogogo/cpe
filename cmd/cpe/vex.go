@@ -14,11 +14,11 @@ import (
 // VEX (Vulnerability Exploitability eXchange) 是 CSAF 的可利用性声明格式。
 
 var (
-	vexProduct      string
-	vexProductID    string
-	vexAuthor       string
-	vexCVE          string
-	vexStatus       string
+	vexProduct       string
+	vexProductID     string
+	vexAuthor        string
+	vexCVE           string
+	vexStatus        string
 	vexJustification string
 )
 

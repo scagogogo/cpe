@@ -14,9 +14,9 @@ import (
 // 风险评分：基于 SBOM 组件 + NVD 数据，输出每个组件的风险评分和优先级。
 
 var (
-	riskSBOMFile  string
-	riskNVDFile   string
-	riskPriority  string
+	riskSBOMFile string
+	riskNVDFile  string
+	riskPriority string
 )
 
 var riskCmd = &cobra.Command{

@@ -51,8 +51,7 @@ func runRelation(cmd *cobra.Command, args []string) error {
 	relStr := rel.String()
 
 	if outputFormat == "json" {
-		fmt.Printf(`{"relation": "%s", "criteria": "%s", "target": "%s"}`, relStr, criteria.GetURI(), target.GetURI())
-		fmt.Println()
+		fmt.Fprintf(cmd.OutOrStdout(), `{"relation": "%s", "criteria": "%s", "target": "%s"}`+"\n", relStr, criteria.GetURI(), target.GetURI())
 		return nil
 	}
 

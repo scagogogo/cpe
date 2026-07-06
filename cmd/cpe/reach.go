@@ -78,12 +78,12 @@ func runReachAnalyze(cmd *cobra.Command, args []string) error {
 		enc := json.NewEncoder(cmd.OutOrStdout())
 		enc.SetIndent("", "  ")
 		return enc.Encode(map[string]interface{}{
-			"total":       len(results),
-			"direct":      summary.Direct,
-			"transitive":  summary.Transitive,
-			"conditional": summary.Conditional,
+			"total":        len(results),
+			"direct":       summary.Direct,
+			"transitive":   summary.Transitive,
+			"conditional":  summary.Conditional,
 			"notReachable": summary.NotReachable,
-			"results":     results,
+			"results":      results,
 		})
 	}
 

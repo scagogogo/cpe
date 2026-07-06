@@ -80,9 +80,9 @@ func buildVulnerabilityReports(sbomFile, nvdFile string) ([]*cpeskills.Vulnerabi
 	var reports []*cpeskills.VulnerabilityReport
 	for _, comp := range sbom.Components {
 		report := &cpeskills.VulnerabilityReport{
-			Component:      comp,
+			Component:       comp,
 			Vulnerabilities: []*cpeskills.VulnerabilityFinding{},
-			GeneratedAt:    time.Now(),
+			GeneratedAt:     time.Now(),
 		}
 		// 用 ScoreComponents 获取风险评分
 		scores := cpeskills.ScoreComponents([]*cpeskills.SBOMComponent{comp}, nvdData)

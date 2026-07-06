@@ -33,4 +33,3 @@ func outputCPEJSON(w io.Writer, c *cpeskills.CPE) error {
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(c)
 }
-
