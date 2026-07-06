@@ -21,6 +21,9 @@ func runCLI(t *testing.T, args ...string) (string, error) {
 	origCyclone, origSPDX, origOut := sbomCycloneDX, sbomSPDX, sbomOutFile
 	defer func() { sbomCycloneDX, sbomSPDX, sbomOutFile = origCyclone, origSPDX, origOut }()
 	sbomCycloneDX, sbomSPDX, sbomOutFile = false, false, ""
+	origExportOut := exportOutFile
+	defer func() { exportOutFile = origExportOut }()
+	exportOutFile = ""
 
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
