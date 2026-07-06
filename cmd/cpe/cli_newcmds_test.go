@@ -16,6 +16,12 @@ func runCLI(t *testing.T, args ...string) (string, error) {
 	defer func() { outputFormat = origOutput }()
 	outputFormat = "text"
 
+	// 重置各命令共享的包级 flag，保证测试间隔离（cobra 重复 Execute
+	// 不会自动复位 BoolVar/StringVar）。
+	origCyclone, origSPDX, origOut := sbomCycloneDX, sbomSPDX, sbomOutFile
+	defer func() { sbomCycloneDX, sbomSPDX, sbomOutFile = origCyclone, origSPDX, origOut }()
+	sbomCycloneDX, sbomSPDX, sbomOutFile = false, false, ""
+
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
