@@ -912,3 +912,28 @@ func TestCLI_Dict_Search(t *testing.T) {
 		t.Errorf("expected log4j in results, got: %s", out)
 	}
 }
+
+// ---- nvd cves-for-cpe / cpes-for-cve（离线，用 NVD 夹具） ----
+
+func TestCLI_NVD_CvesForCPE(t *testing.T) {
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "nvd", "cves-for-cpe",
+		"cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*", "--data", nvd)
+	if err != nil {
+		t.Fatalf("cves-for-cpe: %v", err)
+	}
+	if !strings.Contains(out, "CVE-2021-44228") {
+		t.Errorf("expected CVE-2021-44228, got: %s", out)
+	}
+}
+
+func TestCLI_NVD_CpesForCVE(t *testing.T) {
+	nvd := makeNVDFixture(t)
+	out, err := runCLI(t, "nvd", "cpes-for-cve", "CVE-2021-44228", "--data", nvd)
+	if err != nil {
+		t.Fatalf("cpes-for-cve: %v", err)
+	}
+	if !strings.Contains(out, "log4j") {
+		t.Errorf("expected log4j in results, got: %s", out)
+	}
+}
