@@ -1,6 +1,9 @@
 package cpeskills
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -159,9 +162,9 @@ func TestKEVClientGetAll(t *testing.T) {
 func TestKEVClientGetEntryCached(t *testing.T) {
 	client := NewKEVClient()
 	client.cache["CVE-2021-44228"] = &KEVEntry{
-		CVEID:       "CVE-2021-44228",
+		CVEID:         "CVE-2021-44228",
 		VendorProject: "Apache",
-		Product:     "Log4j",
+		Product:       "Log4j",
 	}
 
 	entry, err := client.GetEntry("CVE-2021-44228")
@@ -222,12 +225,12 @@ func TestKEVClientIsListedCached(t *testing.T) {
 func TestKEVClientIsRansomwareRelated(t *testing.T) {
 	client := NewKEVClient()
 	client.cache["CVE-2021-0001"] = &KEVEntry{
-		CVEID:                       "CVE-2021-0001",
-		KnownRansomwareCampaignUse:  "Known",
+		CVEID:                      "CVE-2021-0001",
+		KnownRansomwareCampaignUse: "Known",
 	}
 	client.cache["CVE-2021-0002"] = &KEVEntry{
-		CVEID:                       "CVE-2021-0002",
-		KnownRansomwareCampaignUse:  "Unknown",
+		CVEID:                      "CVE-2021-0002",
+		KnownRansomwareCampaignUse: "Unknown",
 	}
 
 	related, err := client.IsRansomwareRelated("CVE-2021-0001")
@@ -276,5 +279,260 @@ func TestKEVClientGetRequiredAction(t *testing.T) {
 	}
 	if action != "Apply vendor patch" {
 		t.Errorf("expected 'Apply vendor patch', got %q", action)
+	}
+}
+
+// ---- nil entry 分支 + EnrichVulnerabilityFinding + loadAll HTTP mock ----
+
+func TestKEVClientGetEntry_NotInCache(t *testing.T) {
+	// 缓存未命中且 allCache 为空但 cacheExpiry 未过期 → loadAll 直接返回 nil entry
+	// 这里用 httptest mock loadAll
+	body := `{"title":"test","count":1,"vulnerabilities":[{"cveID":"CVE-2021-44228","vendorProject":"Apache","product":"Log4j","dueDate":"2022-01-15","knownRansomwareCampaignUse":"known","requiredAction":"Apply patch"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+
+	// 命中
+	entry, err := client.GetEntry("CVE-2021-44228")
+	if err != nil {
+		t.Fatalf("GetEntry: %v", err)
+	}
+	if entry == nil || entry.VendorProject != "Apache" {
+		t.Errorf("expected Apache entry, got %+v", entry)
+	}
+	// 不在 KEV 中
+	entry2, err := client.GetEntry("CVE-9999-0000")
+	if err != nil {
+		t.Fatalf("GetEntry unknown: %v", err)
+	}
+	if entry2 != nil {
+		t.Errorf("expected nil for unknown CVE, got %+v", entry2)
+	}
+}
+
+func TestKEVClientGetDueDate_NotInKEV(t *testing.T) {
+	body := `{"title":"test","count":1,"vulnerabilities":[{"cveID":"CVE-2021-44228"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	_, err := client.GetDueDate("CVE-9999-0000")
+	if err == nil {
+		t.Error("expected error for CVE not in KEV")
+	}
+}
+
+func TestKEVClientIsRansomwareRelated_NotInKEV(t *testing.T) {
+	body := `{"title":"test","count":1,"vulnerabilities":[{"cveID":"CVE-2021-44228"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	got, err := client.IsRansomwareRelated("CVE-9999-0000")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got {
+		t.Error("expected false for CVE not in KEV")
+	}
+}
+
+func TestKEVClientIsRansomwareRelated_NotKnown(t *testing.T) {
+	client := NewKEVClient()
+	client.cache["CVE-2021-0001"] = &KEVEntry{CVEID: "CVE-2021-0001", KnownRansomwareCampaignUse: "unknown"}
+	got, err := client.IsRansomwareRelated("CVE-2021-0001")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got {
+		t.Error("expected false for KnownRansomwareCampaignUse=unknown")
+	}
+}
+
+func TestKEVClientGetRequiredAction_NotInKEV(t *testing.T) {
+	body := `{"title":"test","count":1,"vulnerabilities":[{"cveID":"CVE-2021-44228"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	_, err := client.GetRequiredAction("CVE-9999-0000")
+	if err == nil {
+		t.Error("expected error for CVE not in KEV")
+	}
+}
+
+func TestKEVClientCount_EmptyCache(t *testing.T) {
+	// allCache 为空 + cacheExpiry 过期 → 触发 loadAll（用 mock）
+	body := `{"title":"test","count":0,"vulnerabilities":[]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	count, err := client.Count()
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0, got %d", count)
+	}
+}
+
+func TestKEVClientEnrichVulnerabilityFinding(t *testing.T) {
+	client := NewKEVClient()
+	client.cache["CVE-2021-44228"] = &KEVEntry{CVEID: "CVE-2021-44228"}
+	finding := &VulnerabilityFinding{CVE: &CVEReference{CVEID: "CVE-2021-44228"}}
+	if err := client.EnrichVulnerabilityFinding(finding); err != nil {
+		t.Fatalf("EnrichVulnerabilityFinding: %v", err)
+	}
+	if !finding.KEVListed {
+		t.Error("expected KEVListed=true")
+	}
+	// 不在 KEV
+	finding2 := &VulnerabilityFinding{CVE: &CVEReference{CVEID: "CVE-9999-0000"}}
+	if err := client.EnrichVulnerabilityFinding(finding2); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if finding2.KEVListed {
+		t.Error("expected KEVListed=false for unknown CVE")
+	}
+}
+
+func TestKEVClientEnrichVulnerabilityFinding_NilCases(t *testing.T) {
+	client := NewKEVClient()
+	// nil finding
+	if err := client.EnrichVulnerabilityFinding(nil); err != nil {
+		t.Errorf("nil finding should be no-op, got %v", err)
+	}
+	// nil CVE
+	if err := client.EnrichVulnerabilityFinding(&VulnerabilityFinding{}); err != nil {
+		t.Errorf("nil CVE should be no-op, got %v", err)
+	}
+	// 空 CVEID
+	if err := client.EnrichVulnerabilityFinding(&VulnerabilityFinding{CVE: &CVEReference{}}); err != nil {
+		t.Errorf("empty CVEID should be no-op, got %v", err)
+	}
+}
+
+func TestKEVClientEnrichVulnerabilityFindings(t *testing.T) {
+	client := NewKEVClient()
+	client.cache["CVE-2021-44228"] = &KEVEntry{CVEID: "CVE-2021-44228"}
+	findings := []*VulnerabilityFinding{
+		{CVE: &CVEReference{CVEID: "CVE-2021-44228"}},
+		{CVE: &CVEReference{CVEID: "CVE-9999-0000"}},
+		{CVE: nil},
+		nil,
+	}
+	if err := client.EnrichVulnerabilityFindings(findings); err != nil {
+		t.Fatalf("EnrichVulnerabilityFindings: %v", err)
+	}
+	if !findings[0].KEVListed {
+		t.Error("expected first finding KEVListed=true")
+	}
+	if findings[1].KEVListed {
+		t.Error("expected second finding KEVListed=false")
+	}
+}
+
+func TestKEVClientEnrichVulnerabilityFindings_Empty(t *testing.T) {
+	client := NewKEVClient()
+	if err := client.EnrichVulnerabilityFindings(nil); err != nil {
+		t.Errorf("nil findings should be no-op, got %v", err)
+	}
+	// 全是无 CVE 的 finding
+	if err := client.EnrichVulnerabilityFindings([]*VulnerabilityFinding{{}}); err != nil {
+		t.Errorf("no-CVE findings should be no-op, got %v", err)
+	}
+}
+
+func TestKEVClientFilterByVendorAndProduct_EmptyCache(t *testing.T) {
+	body := `{"title":"test","count":0,"vulnerabilities":[]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	v, err := client.FilterByVendor("Apache")
+	if err != nil {
+		t.Fatalf("FilterByVendor: %v", err)
+	}
+	if len(v) != 0 {
+		t.Errorf("expected 0, got %d", len(v))
+	}
+	p, err := client.FilterByProduct("Log4j")
+	if err != nil {
+		t.Fatalf("FilterByProduct: %v", err)
+	}
+	if len(p) != 0 {
+		t.Errorf("expected 0, got %d", len(p))
+	}
+}
+
+func TestKEVClientGetAll_EmptyCache(t *testing.T) {
+	body := `{"title":"test","count":2,"vulnerabilities":[{"cveID":"CVE-1"},{"cveID":"CVE-2"}]}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, body)
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	all, err := client.GetAll()
+	if err != nil {
+		t.Fatalf("GetAll: %v", err)
+	}
+	if len(all) != 2 {
+		t.Errorf("expected 2, got %d", len(all))
+	}
+}
+
+func TestKEVClientLoadAll_HTTPError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "server error")
+	}))
+	defer srv.Close()
+	client := NewKEVClient()
+	client.BaseURL = srv.URL
+	client.HTTPClient = srv.Client()
+	client.minRequestInterval = 0
+	_, err := client.GetAll()
+	if err == nil {
+		t.Error("expected error for 500")
+	}
+}
+
+func TestKEVClientLoadAll_Unreachable(t *testing.T) {
+	client := NewKEVClient()
+	client.BaseURL = "http://127.0.0.1:1"
+	client.HTTPClient = &http.Client{Timeout: 100 * time.Millisecond}
+	client.minRequestInterval = 0
+	_, err := client.GetAll()
+	if err == nil {
+		t.Error("expected error for unreachable host")
 	}
 }

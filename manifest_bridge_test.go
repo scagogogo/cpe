@@ -273,3 +273,31 @@ func TestBuildSBOMFromManifest_InvalidFileType(t *testing.T) {
 		t.Errorf("expected error about unsupported manifest, got %q", err.Error())
 	}
 }
+
+func TestParseManifestToComponents_GoMod(t *testing.T) {
+	content := `module github.com/example/project
+
+go 1.21
+
+require (
+	github.com/gin-gonic/gin v1.9.0
+)
+`
+	result, err := ParseManifestToComponents("go.mod", content)
+	if err != nil {
+		t.Fatalf("ParseManifestToComponents: %v", err)
+	}
+	if result == nil {
+		t.Fatal("expected non-nil result")
+	}
+	if len(result.Components) == 0 {
+		t.Error("expected components in parse result")
+	}
+}
+
+func TestParseManifestToComponents_Unsupported(t *testing.T) {
+	_, err := ParseManifestToComponents("unknown.xyz", "content")
+	if err == nil {
+		t.Error("expected error for unsupported file type")
+	}
+}
