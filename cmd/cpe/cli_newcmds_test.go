@@ -801,6 +801,30 @@ func TestCLI_Batch_Scan(t *testing.T) {
 	}
 }
 
+func TestCLI_Batch_Match(t *testing.T) {
+	dir := t.TempDir()
+	crit := filepath.Join(dir, "crit.txt")
+	tgt := filepath.Join(dir, "tgt.txt")
+	// criteria 与 target 用相同 CPE，确保精确匹配命中。
+	const cpe = "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*\n"
+	if err := os.WriteFile(crit, []byte(cpe), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tgt, []byte(cpe), 0644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runCLI(t, "batch", "match", "--criteria", crit, "--targets", tgt)
+	if err != nil {
+		t.Fatalf("batch match: %v", err)
+	}
+	if !strings.Contains(out, "Match Results") {
+		t.Errorf("expected Match Results, got: %s", out)
+	}
+	if !strings.Contains(out, "matched 1 targets") {
+		t.Errorf("expected 1 match, got: %s", out)
+	}
+}
+
 func TestCLI_Export_CSV(t *testing.T) {
 	sbom := makeSBOMFixture(t)
 	nvd := makeNVDFixture(t)
