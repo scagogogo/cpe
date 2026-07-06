@@ -481,3 +481,99 @@ func TestParseComposerLock(t *testing.T) {
 		t.Error("expected phpunit to be IsDev=true")
 	}
 }
+
+func TestParsePackageLockJSON_V1(t *testing.T) {
+	// lockfile v1 用 dependencies 字段
+	lock := `{
+		"name": "my-app",
+		"version": "1.0.0",
+		"lockfileVersion": 1,
+		"dependencies": {
+			"express": {"version": "4.18.2", "resolved": "https://x/express", "integrity": "sha-abc"},
+			"lodash": {"version": "4.17.21", "dev": true}
+		}
+	}`
+	result, err := ParsePackageLockJSON(strings.NewReader(lock))
+	if err != nil {
+		t.Fatalf("ParsePackageLockJSON v1: %v", err)
+	}
+	if len(result.Components) != 2 {
+		t.Fatalf("expected 2, got %d", len(result.Components))
+	}
+	found := false
+	for _, c := range result.Components {
+		if c.Name == "express" && c.Version == "4.18.2" && c.Resolved == "https://x/express" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("express not found in v1 lock")
+	}
+}
+
+func TestParsePackageLockJSON_ScopedPackage(t *testing.T) {
+	// scoped package @scope/name 应正确提取
+	lock := `{
+		"name": "app",
+		"lockfileVersion": 2,
+		"packages": {
+			"": {"name": "app"},
+			"node_modules/@babel/core": {"version": "7.0.0"},
+			"node_modules/lodash": {"version": "4.17.21"}
+		}
+	}`
+	result, err := ParsePackageLockJSON(strings.NewReader(lock))
+	if err != nil {
+		t.Fatalf("scoped: %v", err)
+	}
+	foundScoped := false
+	for _, c := range result.Components {
+		if c.Name == "@babel/core" {
+			foundScoped = true
+		}
+	}
+	if !foundScoped {
+		t.Error("expected @babel/core in components")
+	}
+}
+
+func TestParsePackageLockJSON_InvalidJSON(t *testing.T) {
+	_, err := ParsePackageLockJSON(strings.NewReader("not json"))
+	if err == nil {
+		t.Error("expected error for invalid JSON")
+	}
+}
+
+func TestParseAuto_AllFormats(t *testing.T) {
+	// 补 ParseAuto 未覆盖的 case
+	tests := []struct {
+		filename string
+		content  string
+	}{
+		{"composer.json", `{"name":"test/test","require":{"php":">=7.0"}}`},
+		{"composer.lock", `{"packages":[{"name":"a/b","version":"1.0"}]}`},
+		{"package-lock.json", `{"name":"x","lockfileVersion":2,"packages":{"":{"name":"x"}}}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.filename, func(t *testing.T) {
+			_, err := ParseAuto(tt.filename, strings.NewReader(tt.content))
+			if err != nil {
+				t.Errorf("ParseAuto(%s): %v", tt.filename, err)
+			}
+		})
+	}
+}
+
+func TestParseAuto_WithPathPrefix(t *testing.T) {
+	// 带路径前缀的 filename 应正确识别
+	_, err := ParseAuto("/path/to/go.mod", strings.NewReader("module example.com/test\n"))
+	if err != nil {
+		t.Fatalf("ParseAuto with path: %v", err)
+	}
+}
+
+func TestConvertToSBOMComponents_Nil(t *testing.T) {
+	if got := ConvertToSBOMComponents(nil); got != nil {
+		t.Errorf("expected nil for nil result, got %v", got)
+	}
+}

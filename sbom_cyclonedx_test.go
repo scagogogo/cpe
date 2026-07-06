@@ -190,3 +190,104 @@ func TestParseCycloneDXJSON_Empty(t *testing.T) {
 		t.Errorf("expected 0 components, got %d", sbom.ComponentCount())
 	}
 }
+
+func TestParseCycloneDXJSON_FullComponent(t *testing.T) {
+	// 覆盖 license(name 无 id)、supplier、properties、external references
+	input := `{
+		"bomFormat": "CycloneDX",
+		"specVersion": "1.5",
+		"version": 1,
+		"metadata": {"timestamp": "2024-01-15T10:30:00.000Z"},
+		"components": [
+			{
+				"type": "library",
+				"name": "full-comp",
+				"version": "1.0",
+				"purl": "pkg:npm/full-comp@1.0",
+				"cpe": "cpe:2.3:a:full:full-comp:1.0:*:*:*:*:*:*:*",
+				"licenses": [{"license": {"name": "Custom License"}}],
+				"hashes": [{"alg": "SHA-512", "content": "def456"}],
+				"supplier": {"name": "Acme Corp"},
+				"properties": [{"name": "key", "value": "val"}],
+				"externalReferences": [{"type": "website", "url": "https://example.com", "comment": "site"}]
+			},
+			{
+				"type": "library",
+				"name": "bad-purl",
+				"purl": "not-a-purl",
+				"cpe": "not-a-cpe"
+			}
+		]
+	}`
+	sbom, err := ParseCycloneDXJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sbom.ComponentCount() != 2 {
+		t.Fatalf("expected 2, got %d", sbom.ComponentCount())
+	}
+	comp := sbom.Components[0]
+	if len(comp.Licenses) != 1 || comp.Licenses[0].Name != "Custom License" {
+		t.Errorf("expected custom license, got %+v", comp.Licenses)
+	}
+	if comp.Hashes["sha-512"] != "def456" {
+		t.Errorf("expected sha-512 hash, got %v", comp.Hashes)
+	}
+	if comp.Supplier != "Acme Corp" {
+		t.Errorf("expected supplier, got %q", comp.Supplier)
+	}
+	if comp.Properties["key"] != "val" {
+		t.Errorf("expected property, got %v", comp.Properties)
+	}
+	if len(comp.ExternalReferences) != 1 || comp.ExternalReferences[0].URL != "https://example.com" {
+		t.Errorf("expected external ref, got %+v", comp.ExternalReferences)
+	}
+	// bad-purl/bad-cpe 不应导致解析失败，只是 PURL/CPE 为 nil
+	comp2 := sbom.Components[1]
+	if comp2.PURL != nil {
+		t.Errorf("expected nil PURL for bad purl, got %+v", comp2.PURL)
+	}
+	if comp2.CPE != nil {
+		t.Errorf("expected nil CPE for bad cpe, got %+v", comp2.CPE)
+	}
+	// metadata timestamp（.000Z layout）
+	if sbom.Metadata.Timestamp.IsZero() {
+		t.Error("expected metadata timestamp parsed")
+	}
+}
+
+func TestParseCycloneDXJSON_TimezoneOffset(t *testing.T) {
+	// 覆盖 -07:00 时区偏移 layout
+	input := `{
+		"bomFormat": "CycloneDX",
+		"specVersion": "1.5",
+		"version": 1,
+		"metadata": {"timestamp": "2024-01-15T10:30:00-07:00"},
+		"components": []
+	}`
+	sbom, err := ParseCycloneDXJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sbom.Metadata.Timestamp.IsZero() {
+		t.Error("expected timestamp with tz offset parsed")
+	}
+}
+
+func TestParseCycloneDXJSON_InvalidTimestamp(t *testing.T) {
+	// 无效 timestamp → time.Time{}
+	input := `{
+		"bomFormat": "CycloneDX",
+		"specVersion": "1.5",
+		"version": 1,
+		"metadata": {"timestamp": "not-a-date"},
+		"components": []
+	}`
+	sbom, err := ParseCycloneDXJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !sbom.Metadata.Timestamp.IsZero() {
+		t.Error("expected zero time for invalid timestamp")
+	}
+}

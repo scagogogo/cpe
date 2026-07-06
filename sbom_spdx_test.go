@@ -241,3 +241,112 @@ func TestParseSPDXSupplier(t *testing.T) {
 		t.Errorf("expected empty, got %q", s)
 	}
 }
+
+func TestParseSPDXJSON_FullPackage(t *testing.T) {
+	// 覆盖 cpe23Type ref、checksums、supplier、NOASSERTION/NONE license
+	input := `{
+		"SPDXID": "SPDXRef-DOCUMENT",
+		"spdxVersion": "SPDX-2.3",
+		"name": "test",
+		"dataLicense": "CC0-1.0",
+		"creationInfo": {"created": "2024-01-15T10:30:00Z"},
+		"packages": [
+			{
+				"SPDXID": "SPDXRef-1",
+				"name": "pkg1",
+				"versionInfo": "1.0",
+				"downloadLocation": "NOASSERTION",
+				"filesAnalyzed": false,
+				"licenseConcluded": "NOASSERTION",
+				"licenseDeclared": "NOASSERTION",
+				"copyrightText": "NOASSERTION",
+				"supplier": "Organization: Acme Corp",
+				"checksums": [
+					{"algorithm": "SHA256", "checksumValue": "abc123"}
+				],
+				"externalRefs": [
+					{"referenceType": "cpe23Type", "referenceLocator": "cpe:2.3:a:acme:pkg1:1.0:*:*:*:*:*:*:*"},
+					{"referenceType": "purl", "referenceLocator": "pkg:npm/pkg1@1.0"}
+				]
+			},
+			{
+				"SPDXID": "SPDXRef-2",
+				"name": "pkg2",
+				"downloadLocation": "NOASSERTION",
+				"filesAnalyzed": false,
+				"licenseDeclared": "NONE",
+				"supplier": "NOASSERTION",
+				"externalRefs": [
+					{"referenceType": "cpe22Type", "referenceLocator": "cpe:/acme:pkg2"}
+				]
+			},
+			{
+				"SPDXID": "SPDXRef-3",
+				"name": "pkg3",
+				"downloadLocation": "NOASSERTION",
+				"filesAnalyzed": false,
+				"licenseDeclared": "GPL-3.0-only",
+				"supplier": "Person: Jane Doe"
+			}
+		]
+	}`
+	sbom, err := ParseSPDXJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if sbom.ComponentCount() != 3 {
+		t.Fatalf("expected 3, got %d", sbom.ComponentCount())
+	}
+	c1 := sbom.Components[0]
+	if c1.CPE == nil || string(c1.CPE.Vendor) != "acme" {
+		t.Errorf("expected CPE acme, got %+v", c1.CPE)
+	}
+	if c1.Hashes["sha256"] != "abc123" {
+		t.Errorf("expected sha256 hash, got %v", c1.Hashes)
+	}
+	if c1.Supplier != "Acme Corp" {
+		t.Errorf("expected supplier Acme Corp, got %q", c1.Supplier)
+	}
+	if len(c1.Licenses) != 0 {
+		t.Errorf("expected no license for NOASSERTION, got %+v", c1.Licenses)
+	}
+	// pkg2: NONE license, cpe22Type, NOASSERTION supplier
+	c2 := sbom.Components[1]
+	if c2.Supplier != "" {
+		t.Errorf("expected empty supplier for NOASSERTION, got %q", c2.Supplier)
+	}
+	if len(c2.Licenses) != 0 {
+		t.Errorf("expected no license for NONE, got %+v", c2.Licenses)
+	}
+	// pkg3: Person supplier
+	c3 := sbom.Components[2]
+	if c3.Supplier != "Jane Doe" {
+		t.Errorf("expected Jane Doe, got %q", c3.Supplier)
+	}
+}
+
+func TestParseSPDXJSON_InvalidTimestamp(t *testing.T) {
+	input := `{
+		"SPDXID": "SPDXRef-DOC",
+		"spdxVersion": "SPDX-2.3",
+		"name": "test",
+		"dataLicense": "CC0-1.0",
+		"creationInfo": {"created": "not-a-date"},
+		"packages": []
+	}`
+	sbom, err := ParseSPDXJSON([]byte(input))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !sbom.Metadata.Timestamp.IsZero() {
+		t.Error("expected zero time for invalid timestamp")
+	}
+}
+
+func TestParseSPDXSupplier_NoPrefix(t *testing.T) {
+	// supplier 无 "Type: " 前缀 → 原样返回
+	s := parseSPDXSupplier("Just A Name")
+	if s != "Just A Name" {
+		t.Errorf("expected 'Just A Name', got %q", s)
+	}
+}

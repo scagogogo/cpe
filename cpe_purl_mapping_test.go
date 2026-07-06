@@ -142,45 +142,45 @@ func TestCPEToPURL_NoVersion(t *testing.T) {
 
 func TestPURLToCPE(t *testing.T) {
 	tests := []struct {
-		name     string
-		purl     *PackageURL
-		wantVendor string
+		name        string
+		purl        *PackageURL
+		wantVendor  string
 		wantProduct string
 	}{
 		{
-			name:     "npm package",
-			purl:     NewPURL("npm", "", "express", "4.17.1"),
-			wantVendor: "npm",
+			name:        "npm package",
+			purl:        NewPURL("npm", "", "express", "4.17.1"),
+			wantVendor:  "npm",
 			wantProduct: "express",
 		},
 		{
-			name:     "maven package",
-			purl:     NewPURL("maven", "org.apache.logging.log4j", "log4j-core", "2.14.1"),
-			wantVendor: "org",
+			name:        "maven package",
+			purl:        NewPURL("maven", "org.apache.logging.log4j", "log4j-core", "2.14.1"),
+			wantVendor:  "org",
 			wantProduct: "log4j-core",
 		},
 		{
-			name:     "pypi package",
-			purl:     NewPURL("pypi", "", "django", "4.2.0"),
-			wantVendor: "python",
+			name:        "pypi package",
+			purl:        NewPURL("pypi", "", "django", "4.2.0"),
+			wantVendor:  "python",
 			wantProduct: "django",
 		},
 		{
-			name:     "golang package",
-			purl:     NewPURL("golang", "github.com", "gin-gonic/gin", "1.9.0"),
-			wantVendor: "gin-gonic", // Go 取 name 第一段作为 vendor
+			name:        "golang package",
+			purl:        NewPURL("golang", "github.com", "gin-gonic/gin", "1.9.0"),
+			wantVendor:  "gin-gonic", // Go 取 name 第一段作为 vendor
 			wantProduct: "gin",       // Go 取 name 最后一段作为 product
 		},
 		{
-			name:     "docker image",
-			purl:     NewPURL("docker", "library", "nginx", "1.21"),
-			wantVendor: "library",
+			name:        "docker image",
+			purl:        NewPURL("docker", "library", "nginx", "1.21"),
+			wantVendor:  "library",
 			wantProduct: "nginx",
 		},
 		{
-			name:     "composer package",
-			purl:     NewPURL("composer", "laravel", "framework", "10.0.0"),
-			wantVendor: "packagist", // composer 中 namespace 不用作 vendor
+			name:        "composer package",
+			purl:        NewPURL("composer", "laravel", "framework", "10.0.0"),
+			wantVendor:  "packagist", // composer 中 namespace 不用作 vendor
 			wantProduct: "framework",
 		},
 	}
@@ -325,10 +325,10 @@ func TestCPEToPURL_RoundTrip(t *testing.T) {
 
 func TestInferEcosystem(t *testing.T) {
 	tests := []struct {
-		vendor     string
-		product    string
-		wantEco    Ecosystem
-		minConf    float64
+		vendor  string
+		product string
+		wantEco Ecosystem
+		minConf float64
 	}{
 		{"apache", "log4j", EcosystemMaven, 0.8},
 		{"spring", "spring-core", EcosystemMaven, 0.9},
@@ -350,5 +350,79 @@ func TestInferEcosystem(t *testing.T) {
 		if conf < tt.minConf {
 			t.Errorf("inferEcosystem(%q, %q): expected confidence >= %f, got %f", tt.vendor, tt.product, tt.minConf, conf)
 		}
+	}
+}
+
+func TestPURLToCPE_ScopedNPM(t *testing.T) {
+	// NPM scoped package：namespace="@babel"
+	purl := NewPURL("npm", "@babel", "core", "7.0.0")
+	cpe, _, err := PURLToCPE(purl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(cpe.Vendor) != "babel" {
+		t.Errorf("expected vendor 'babel', got %q", cpe.Vendor)
+	}
+	if string(cpe.ProductName) != "core" {
+		t.Errorf("expected product 'core', got %q", cpe.ProductName)
+	}
+}
+
+func TestPURLToCPE_NPMWithSlashInName(t *testing.T) {
+	// NPM 无 namespace 但 name 含 /（如 "lodash/lodash"）
+	purl := NewPURL("npm", "", "lodash", "4.0.0")
+	cpe, _, err := PURLToCPE(purl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(cpe.Vendor) != "npm" {
+		t.Errorf("expected vendor 'npm', got %q", cpe.Vendor)
+	}
+}
+
+func TestPURLToCPE_GoSingleSegment(t *testing.T) {
+	// Go name 单段（无 /）
+	purl := NewPURL("golang", "", "single", "1.0.0")
+	cpe, _, err := PURLToCPE(purl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(cpe.Vendor) != "golang" {
+		t.Errorf("expected vendor 'golang', got %q", cpe.Vendor)
+	}
+	if string(cpe.ProductName) != "single" {
+		t.Errorf("expected product 'single', got %q", cpe.ProductName)
+	}
+}
+
+func TestPURLToCPE_UnknownEcosystem(t *testing.T) {
+	// 未知 ecosystem → default 分支
+	purl := NewPURL("unknown-eco", "", "foo", "1.0.0")
+	cpe, _, err := PURLToCPE(purl)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cpe == nil {
+		t.Fatal("expected non-nil CPE for unknown ecosystem")
+	}
+}
+
+func TestBuildPURLFromCPE_DockerAndMaven(t *testing.T) {
+	// 覆盖 buildPURLFromCPE 的 Docker/Maven namespace 分支
+	cpeMaven := mustParseCPE(t, "cpe:2.3:a:apache:log4j:2.14:*:*:*:*:*:*:*")
+	purlMaven, err := MapCPEToPURLWithEcosystem(cpeMaven, EcosystemMaven)
+	if err != nil {
+		t.Fatalf("maven: %v", err)
+	}
+	if purlMaven == nil {
+		t.Fatal("expected non-nil maven purl")
+	}
+	cpeDocker := mustParseCPE(t, "cpe:2.3:a:library:nginx:1.21:*:*:*:*:*:*:*")
+	purlDocker, err := MapCPEToPURLWithEcosystem(cpeDocker, EcosystemDocker)
+	if err != nil {
+		t.Fatalf("docker: %v", err)
+	}
+	if purlDocker == nil {
+		t.Fatal("expected non-nil docker purl")
 	}
 }
