@@ -31,8 +31,14 @@ func init() {
 }
 
 func execute() {
+	os.Exit(executeRun())
+}
+
+// executeRun 执行根命令并返回退出码，供测试调用以避免 os.Exit。
+func executeRun() int {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }

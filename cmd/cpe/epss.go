@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/spf13/cobra"
@@ -11,6 +13,9 @@ import (
 // epss.go — `cpe epss <cve-id>` → NewEPSSClient + GetScore(cveID)
 // EPSS (Exploit Prediction Scoring System) 是 FIRST 的漏洞利用预测评分。
 // 返回 EPSSEntry 含 EPSS 评分、百分位、日期等。
+
+// epssBaseURL 覆盖 EPSS API 基础 URL，空则用默认。测试注入 httptest URL。
+var epssBaseURL string
 
 var epssCmd = &cobra.Command{
 	Use:   "epss <cve-id>",
@@ -28,6 +33,7 @@ Examples:
 }
 
 func init() {
+	epssCmd.Flags().StringVar(&epssBaseURL, "base-url", "", "EPSS API base URL (default: FIRST EPSS endpoint)")
 	rootCmd.AddCommand(epssCmd)
 }
 
@@ -35,6 +41,10 @@ func runEPSS(cmd *cobra.Command, args []string) error {
 	cveID := args[0]
 
 	client := cpeskills.NewEPSSClient()
+	if epssBaseURL != "" {
+		client.BaseURL = epssBaseURL
+		client.HTTPClient = &http.Client{Timeout: 10 * time.Second}
+	}
 	entry, err := client.GetScore(cveID)
 	if err != nil {
 		return fmt.Errorf("query EPSS: %w", err)

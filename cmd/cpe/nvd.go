@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 
 	cpeskills "github.com/scagogogo/cpe-skills"
@@ -18,7 +19,12 @@ import (
 var (
 	nvdCacheDir    string
 	nvdCacheMaxAge int
-	nvdDataFile    string
+
+	// nvdHTTPClientOverride 覆盖下载 NVD feed 用的 HTTPClient。空则用
+	// DefaultNVDFeedOptions 中的默认 client。测试注入 redirectTransport 把
+	// NVD feed 请求导向 httptest server，实现离线覆盖 runNVDDownload。
+	nvdHTTPClientOverride *http.Client
+	nvdDataFile           string
 )
 
 var nvdCmd = &cobra.Command{
@@ -83,6 +89,9 @@ func runNVDDownload(cmd *cobra.Command, args []string) error {
 	}
 	if nvdCacheMaxAge > 0 {
 		opts.CacheMaxAge = nvdCacheMaxAge
+	}
+	if nvdHTTPClientOverride != nil {
+		opts.HTTPClient = nvdHTTPClientOverride
 	}
 
 	data, err := cpeskills.DownloadAllNVDData(opts)

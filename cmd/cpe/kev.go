@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/spf13/cobra"
@@ -13,6 +15,20 @@ import (
 //   - `cpe kev get <cve-id>` → KEVClient.GetEntry (返回 *KEVEntry)
 //   - `cpe kev list` → KEVClient.GetAll (返回 []*KEVEntry)
 // KEV (Known Exploited Vulnerabilities) 是 CISA 的已知被利用漏洞清单。
+
+// kevBaseURL 覆盖 KEV 目录基础 URL，空则用默认。用 PersistentFlags 让子命令继承。
+// 测试注入 httptest URL。
+var kevBaseURL string
+
+// newKEVClientForCLI 构造 KEV 客户端，若 kevBaseURL 非空则覆盖 BaseURL/HTTPClient。
+func newKEVClientForCLI() *cpeskills.KEVClient {
+	client := cpeskills.NewKEVClient()
+	if kevBaseURL != "" {
+		client.BaseURL = kevBaseURL
+		client.HTTPClient = &http.Client{Timeout: 10 * time.Second}
+	}
+	return client
+}
 
 var kevCmd = &cobra.Command{
 	Use:   "kev",
@@ -51,6 +67,7 @@ var kevListCmd = &cobra.Command{
 }
 
 func init() {
+	kevCmd.PersistentFlags().StringVar(&kevBaseURL, "base-url", "", "KEV catalog base URL (default: CISA endpoint)")
 	kevCmd.AddCommand(kevIsListedCmd)
 	kevCmd.AddCommand(kevGetCmd)
 	kevCmd.AddCommand(kevListCmd)
@@ -60,7 +77,7 @@ func init() {
 func runKEVIsListed(cmd *cobra.Command, args []string) error {
 	cveID := args[0]
 
-	client := cpeskills.NewKEVClient()
+	client := newKEVClientForCLI()
 	listed, err := client.IsListed(cveID)
 	if err != nil {
 		return fmt.Errorf("query KEV: %w", err)
@@ -83,7 +100,7 @@ func runKEVIsListed(cmd *cobra.Command, args []string) error {
 func runKEVGet(cmd *cobra.Command, args []string) error {
 	cveID := args[0]
 
-	client := cpeskills.NewKEVClient()
+	client := newKEVClientForCLI()
 	entry, err := client.GetEntry(cveID)
 	if err != nil {
 		return fmt.Errorf("get KEV entry: %w", err)
@@ -104,7 +121,7 @@ func runKEVGet(cmd *cobra.Command, args []string) error {
 }
 
 func runKEVList(cmd *cobra.Command, args []string) error {
-	client := cpeskills.NewKEVClient()
+	client := newKEVClientForCLI()
 	entries, err := client.GetAll()
 	if err != nil {
 		return fmt.Errorf("list KEV: %w", err)

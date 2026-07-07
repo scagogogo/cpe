@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	cpeskills "github.com/scagogogo/cpe-skills"
 	"github.com/spf13/cobra"
@@ -11,6 +13,9 @@ import (
 // osv.go — `cpe osv query --purl <purl>` → OSVClient.Query
 //            `cpe osv query --ecosystem npm --name foo --version 1.0` → QueryByEcosystem
 // OSV (Open Source Vulnerabilities) 是 Google 的开源漏洞数据库。
+
+// osvBaseURL 覆盖 OSV API 基础 URL，空则用默认。测试注入 httptest URL。
+var osvBaseURL string
 
 var (
 	osvPurl      string
@@ -40,12 +45,18 @@ func init() {
 	osvCmd.Flags().StringVar(&osvEcosystem, "ecosystem", "", "Ecosystem (npm, golang, pip, maven, etc.)")
 	osvCmd.Flags().StringVar(&osvName, "name", "", "Package name")
 	osvCmd.Flags().StringVar(&osvVersion, "version", "", "Package version")
+	osvCmd.Flags().StringVar(&osvBaseURL, "base-url", "", "OSV API base URL (default: osv.dev endpoint)")
 
 	rootCmd.AddCommand(osvCmd)
 }
 
 func runOSV(cmd *cobra.Command, args []string) error {
 	client := cpeskills.NewOSVClient()
+	if osvBaseURL != "" {
+		client.BaseURL = osvBaseURL
+		client.HTTPClient = &http.Client{Timeout: 10 * time.Second}
+		client.RetryCount = 0 // 测试/自定义端点不重试，避免慢
+	}
 
 	var entries []*cpeskills.OSVEntry
 	var err error

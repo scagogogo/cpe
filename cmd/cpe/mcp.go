@@ -54,15 +54,19 @@ func init() {
 	rootCmd.AddCommand(mcpCmd)
 }
 
-func runMCPServe(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
+// newMCPServer 构造一个已注册全部 CPE 工具的 MCP server，供测试调用。
+func newMCPServer() *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{
 		Name:    "cpe-skills",
 		Version: cliVersion,
 	}, nil)
-
 	registerMCPTools(srv)
+	return srv
+}
 
+func runMCPServe(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+	srv := newMCPServer()
 	return srv.Run(ctx, &mcp.StdioTransport{})
 }
 

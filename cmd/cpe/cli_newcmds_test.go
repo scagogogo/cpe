@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 // runCLI 在测试中执行 root 命令，捕获 stdout。
@@ -45,13 +47,47 @@ func runCLI(t *testing.T, args ...string) (string, error) {
 	defer func() { storeDir = origStoreDir }()
 	storeDir = ""
 
+	// 网络命令的 base-url / HTTPClient 注入点同样需复位，避免测试间残留。
+	origEpssBaseURL, origKevBaseURL, origOsvBaseURL := epssBaseURL, kevBaseURL, osvBaseURL
+	defer func() { epssBaseURL, kevBaseURL, osvBaseURL = origEpssBaseURL, origKevBaseURL, origOsvBaseURL }()
+	epssBaseURL, kevBaseURL, osvBaseURL = "", "", ""
+	// nvdHTTPClientOverride 不在此复位：它是测试专用注入点，仅 runNVDDownload
+	// 读取，残留不影响其他命令；nvd 测试自行 defer 复位，且其赋值需在 Execute
+	// 期间生效（无法通过 flag 传 HTTPClient）。
+
+	// osv 子命令的查询参数 flag 同样需复位，否则上一个 osv 测试设的
+	// --purl/--ecosystem/--name/--version 会残留，导致 NoArgs 类测试误走查询路径。
+	origOsvArgs := [4]string{osvPurl, osvEcosystem, osvName, osvVersion}
+	defer func() { osvPurl, osvEcosystem, osvName, osvVersion = origOsvArgs[0], origOsvArgs[1], origOsvArgs[2], origOsvArgs[3] }()
+	osvPurl, osvEcosystem, osvName, osvVersion = "", "", "", ""
+
+	// nvd 子命令的 --cache-dir / --data / --cache-max-age 同样需复位。
+	origNVDCache, origNVDData, origNVDMaxAge := nvdCacheDir, nvdDataFile, nvdCacheMaxAge
+	defer func() { nvdCacheDir, nvdDataFile, nvdCacheMaxAge = origNVDCache, origNVDData, origNVDMaxAge }()
+	nvdCacheDir, nvdDataFile, nvdCacheMaxAge = "", "", 0
+
 	var buf bytes.Buffer
 	rootCmd.SetOut(&buf)
 	rootCmd.SetErr(&buf)
 	rootCmd.SetArgs(args)
 
+	// 复位所有命令的 help flag：pflag 的 BoolVar 在重复 Execute 间不会自动
+	// 清零，上一轮 `cpe <cmd> --help` 设的 help=true 会残留，导致后续不传
+	// --help 的调用也误进帮助分支、不执行 RunE。
+	resetHelpFlags(rootCmd)
+
 	err := rootCmd.Execute()
 	return buf.String(), err
+}
+
+// resetHelpFlags 递归把命令树中每个命令的 help flag 复位为 false。
+func resetHelpFlags(cmd *cobra.Command) {
+	if hf := cmd.Flags().Lookup("help"); hf != nil {
+		_ = hf.Value.Set("false")
+	}
+	for _, sub := range cmd.Commands() {
+		resetHelpFlags(sub)
+	}
 }
 
 // runCLIJSON 同 runCLI 但用 JSON 输出。
