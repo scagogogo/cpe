@@ -187,20 +187,27 @@ storage, err := cpeskills.NewFileStorage("./cpe-data", true)
 
 ### 3. 验证输入
 ```go
-err := cpeskills.ValidateCPEString(userInput)
+// Parse 接受 CPE 2.3 或 2.2 字符串并校验其格式。
+cpe, err := cpeskills.Parse(userInput)
 if err != nil {
     return fmt.Errorf("无效的CPE格式: %w", err)
+}
+// 可选：对解析后的 CPE 执行更深入的字段校验。
+if err := cpeskills.ValidateCPE(cpe); err != nil {
+    return fmt.Errorf("无效的CPE字段: %w", err)
 }
 ```
 
 ### 4. 对集合使用 Sets
 ```go
 // 对大集合高效
-cpeSet := cpeskills.NewCPESet()
-cpeSet.Add(cpe1, cpe2, cpe3)
+cpeSet := cpeskills.NewCPESet("my-collection", "用于过滤的 CPE 集合")
+cpeSet.Add(cpe1)
+cpeSet.Add(cpe2)
+cpeSet.Add(cpe3)
 
-// 高效过滤
-microsoftCPEs := cpeSet.FilterByVendor("microsoft")
+// 高效过滤（FilterByVendor 是包级函数）
+microsoftCPEs := cpeskills.FilterByVendor(cpeSet.ToSlice(), "microsoft")
 ```
 
 ## 性能提示
@@ -213,8 +220,8 @@ storage, _ := cpeskills.NewFileStorage("./data", true) // 启用缓存
 ### 2. 使用批操作
 ```go
 // 比单个操作更好
-cpeSet := cpeskills.FromArray(cpeArray)
-results := cpeSet.FilterByVendor("microsoft")
+cpeSet := cpeskills.FromArray(cpeArray, "batch", "批处理 CPE")
+results := cpeskills.FilterByVendor(cpeSet.ToSlice(), "microsoft")
 ```
 
 ### 3. 重用匹配选项

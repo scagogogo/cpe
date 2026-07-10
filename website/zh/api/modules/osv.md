@@ -144,7 +144,7 @@ func QueryOSV(purl *PackageURL) ([]*OSVEntry, error)
 | #2 | `error` | 查询错误 |
 
 ```go
-purl, _ := cpeskills.ParsePurl("pkg:golang/github.com/apache/log4j@2.0")
+purl, _ := cpeskills.ParsePURL("pkg:golang/github.com/apache/log4j@2.0")
 vulns, err := cpeskills.QueryOSV(purl)
 ```
 

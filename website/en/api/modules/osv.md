@@ -144,7 +144,7 @@ Convenience function that creates a default `OSVClient` and queries vulnerabilit
 | #2 | `error` | Query error |
 
 ```go
-purl, _ := cpeskills.ParsePurl("pkg:golang/github.com/apache/log4j@2.0")
+purl, _ := cpeskills.ParsePURL("pkg:golang/github.com/apache/log4j@2.0")
 vulns, err := cpeskills.QueryOSV(purl)
 ```
 

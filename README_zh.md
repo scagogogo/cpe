@@ -7,7 +7,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/scagogogo/cpe-skills.svg)](https://pkg.go.dev/github.com/scagogogo/cpe-skills)
 [![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/cpe-skills)](https://goreportcard.com/report/github.com/scagogogo/cpe-skills)
 [![Test Coverage](https://img.shields.io/badge/coverage-%E2%89%A5_91%25-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
-[![Tests](https://img.shields.io/badge/tests-1258-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
+[![Tests](https://img.shields.io/badge/tests-1478-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
 [![Release](https://img.shields.io/github/v/release/scagogogo/cpe-skills?include_prereleases)](https://github.com/scagogogo/cpe-skills/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-108-blue)](https://github.com/scagogogo/cpe-skills/releases)
@@ -28,10 +28,10 @@
 | **项目** | cpe-skills |
 | **一句话定位** | CPE（通用平台枚举）工具包 —— 解析、匹配、生成、漏洞关联、SBOM、VEX。 |
 | **语言** | Go（`module github.com/scagogogo/cpe-skills`，要求 **Go ≥ 1.25**） |
-| **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.0.0 |
+| **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.6.1 |
 | **覆盖率** | ≥ 91%（CI 对主包门槛 90%） |
-| **测试用例** | 1258 |
-| **导出符号** | ~1470 |
+| **测试用例** | 1478 |
+| **导出符号** | ~2129（1690 函数 + 325 方法 + 114 类型） |
 | **平台** | 每次发布 108 个预编译二进制 —— 9 个操作系统 × 13 种架构 |
 | **许可证** | MIT |
 | **官网** | https://scagogogo.github.io/cpe-skills/ |
@@ -56,8 +56,8 @@
 | 类别 | 入口函数 |
 |------|---------|
 | **解析** | `Parse`, `ParseCpe22`, `ParseCpe23`, `MustParse` |
-| **匹配（NISTIR 7696）** | `Match`, `MatchCPE`, `QuickMatch`, `AdvancedMatchCPE`, `BatchMatchCPEs` |
-| **生成与构建** | `GenerateCPE`, `FuzzyGenerateCPE`, `NewBuilder`, `RandomCPE` |
+| **匹配（NISTIR 7696）** | `MatchCPE`, `QuickMatch`, `AdvancedMatchCPE`, `BatchMatchCPEs` |
+| **生成与构建** | `GenerateCPE`, `FuzzyGenerateCPE`, `NewCPEBuilder`, `RandomCPE` |
 | **WFN 绑定与转义** | `BindToFS`, `BindToURI`, `UnbindFS`, `FromCPE` |
 | **校验与归一化** | `ValidateCPE`, `NormalizeCPE`, `NormalizeVendorName`, `NormalizeProductName` |
 | **存储与索引** | `NewMemoryStorage`, `NewFileStorage`, `NewCPEIndex`, `ParseDictionary` |
@@ -211,7 +211,7 @@ json, _ := cpeskills.ExportSBOMToCycloneDX(sbom)
 scorer := cpeskills.NewDefaultRiskScorer()
 scores := cpeskills.ScoreComponents(components, nvdData)
 cpeskills.SortByRisk(scores)
-critical := cpeskills.FilterByPriority(scores, cpeskills.RiskCritical)
+critical := cpeskills.FilterByPriority(scores, cpeskills.RiskPriorityCritical)
 ```
 
 ### CPE ↔ PURL（包 URL）桥接

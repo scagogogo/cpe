@@ -27,7 +27,7 @@ Every OSV query is anchored on a package identity. cpe-skills' [`OSVClient`](/en
 client := cpeskills.NewOSVClient()
 
 // Query by Package URL (preferred for SBOM-driven scanning)
-purl, _ := cpeskills.ParsePackageURL("pkg:golang/github.com/apache/log4j@2.14")
+purl, _ := cpeskills.ParsePURL("pkg:golang/github.com/apache/log4j@2.14")
 entries, err := client.Query(purl)
 
 // Or query by ecosystem coordinates

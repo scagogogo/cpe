@@ -187,20 +187,27 @@ storage, err := cpeskills.NewFileStorage("./cpe-data", true)
 
 ### 3. Validate Input
 ```go
-err := cpeskills.ValidateCPEString(userInput)
+// Parse accepts a CPE 2.3 or 2.2 string and validates its format.
+cpe, err := cpeskills.Parse(userInput)
 if err != nil {
     return fmt.Errorf("invalid CPE format: %w", err)
+}
+// Optionally run deeper field validation on the parsed CPE.
+if err := cpeskills.ValidateCPE(cpe); err != nil {
+    return fmt.Errorf("invalid CPE fields: %w", err)
 }
 ```
 
 ### 4. Use Sets for Collections
 ```go
 // Efficient for large collections
-cpeSet := cpeskills.NewCPESet()
-cpeSet.Add(cpe1, cpe2, cpe3)
+cpeSet := cpeskills.NewCPESet("my-collection", "CPEs grouped for filtering")
+cpeSet.Add(cpe1)
+cpeSet.Add(cpe2)
+cpeSet.Add(cpe3)
 
-// Filter efficiently
-microsoftCPEs := cpeSet.FilterByVendor("microsoft")
+// Filter efficiently (FilterByVendor is a package-level function)
+microsoftCPEs := cpeskills.FilterByVendor(cpeSet.ToSlice(), "microsoft")
 ```
 
 ## Performance Tips
@@ -213,8 +220,8 @@ storage, _ := cpeskills.NewFileStorage("./data", true) // Enable cache
 ### 2. Use Batch Operations
 ```go
 // Better than individual operations
-cpeSet := cpeskills.FromArray(cpeArray)
-results := cpeSet.FilterByVendor("microsoft")
+cpeSet := cpeskills.FromArray(cpeArray, "batch", "batched CPEs")
+results := cpeskills.FilterByVendor(cpeSet.ToSlice(), "microsoft")
 ```
 
 ### 3. Reuse Match Options

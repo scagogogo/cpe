@@ -7,7 +7,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/scagogogo/cpe-skills.svg)](https://pkg.go.dev/github.com/scagogogo/cpe-skills)
 [![Go Report Card](https://goreportcard.com/badge/github.com/scagogogo/cpe-skills)](https://goreportcard.com/report/github.com/scagogogo/cpe-skills)
 [![Test Coverage](https://img.shields.io/badge/coverage-%E2%89%A5_91%25-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
-[![Tests](https://img.shields.io/badge/tests-1258-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
+[![Tests](https://img.shields.io/badge/tests-1478-brightgreen)](https://github.com/scagogogo/cpe-skills/actions)
 [![Release](https://img.shields.io/github/v/release/scagogogo/cpe-skills?include_prereleases)](https://github.com/scagogogo/cpe-skills/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platforms](https://img.shields.io/badge/platforms-108-blue)](https://github.com/scagogogo/cpe-skills/releases)
@@ -28,10 +28,10 @@
 | **Project** | cpe-skills |
 | **One-liner** | CPE (Common Platform Enumeration) toolkit — parsing, matching, generation, vulnerability correlation, SBOM, VEX. |
 | **Language** | Go (`module github.com/scagogogo/cpe-skills`, requires **Go ≥ 1.25**) |
-| **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.0.0 |
+| **MCP SDK** | `github.com/modelcontextprotocol/go-sdk` v1.6.1 |
 | **Coverage** | ≥ 91% (CI gate at 90% on main package) |
-| **Test cases** | 1258 |
-| **Exported symbols** | ~1470 |
+| **Test cases** | 1478 |
+| **Exported symbols** | ~2129 (1690 functions + 325 methods + 114 types) |
 | **Platforms** | 108 prebuilt binaries per release — 9 OSes × 13 architectures |
 | **License** | MIT |
 | **Website** | https://scagogogo.github.io/cpe-skills/ |
@@ -56,8 +56,8 @@
 | Category | Entry functions |
 |----------|----------------|
 | **Parsing** | `Parse`, `ParseCpe22`, `ParseCpe23`, `MustParse` |
-| **Matching (NISTIR 7696)** | `Match`, `MatchCPE`, `QuickMatch`, `AdvancedMatchCPE`, `BatchMatchCPEs` |
-| **Generation & Builder** | `GenerateCPE`, `FuzzyGenerateCPE`, `NewBuilder`, `RandomCPE` |
+| **Matching (NISTIR 7696)** | `MatchCPE`, `QuickMatch`, `AdvancedMatchCPE`, `BatchMatchCPEs` |
+| **Generation & Builder** | `GenerateCPE`, `FuzzyGenerateCPE`, `NewCPEBuilder`, `RandomCPE` |
 | **WFN Binding & Escaping** | `BindToFS`, `BindToURI`, `UnbindFS`, `FromCPE` |
 | **Validation & Normalization** | `ValidateCPE`, `NormalizeCPE`, `NormalizeVendorName`, `NormalizeProductName` |
 | **Storage & Index** | `NewMemoryStorage`, `NewFileStorage`, `NewCPEIndex`, `ParseDictionary` |
@@ -211,7 +211,7 @@ json, _ := cpeskills.ExportSBOMToCycloneDX(sbom)
 scorer := cpeskills.NewDefaultRiskScorer()
 scores := cpeskills.ScoreComponents(components, nvdData)
 cpeskills.SortByRisk(scores)
-critical := cpeskills.FilterByPriority(scores, cpeskills.RiskCritical)
+critical := cpeskills.FilterByPriority(scores, cpeskills.RiskPriorityCritical)
 ```
 
 ### Bridge CPE ↔ PURL (package URL)

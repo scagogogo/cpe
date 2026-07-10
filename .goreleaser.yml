@@ -1,6 +1,8 @@
 # GoReleaser configuration for cpe-skills
 # https://goreleaser.com
 
+version: 2
+
 before:
   hooks:
     - go mod tidy
@@ -11,6 +13,11 @@ builds:
     binary: cpe
     env:
       - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.cliVersion={{.Version}}
+      - -X main.cliGitCommit={{.Commit}}
+      - -X main.cliBuildDate={{.Date}}
     goos:
       - linux
       - darwin
@@ -167,7 +174,7 @@ checksum:
   algorithm: sha256
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc

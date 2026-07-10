@@ -8,7 +8,10 @@ import (
 )
 
 var (
-	cliVersion   = "0.1.0"
+	// 这些变量在 release 构建时由 goreleaser 通过 -ldflags -X 注入
+	// （见 .goreleaser.yml builds.ldflags）。开发构建（go build/test）时
+	// 保持占位值，不误导用户以为运行的是某个已发布版本。
+	cliVersion   = "dev"
 	cliGitCommit = "unknown"
 	cliBuildDate = "unknown"
 )

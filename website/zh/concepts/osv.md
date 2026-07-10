@@ -27,7 +27,7 @@ outline: deep
 client := cpeskills.NewOSVClient()
 
 // 按 Package URL 查询（SBOM 驱动扫描的首选）
-purl, _ := cpeskills.ParsePackageURL("pkg:golang/github.com/apache/log4j@2.14")
+purl, _ := cpeskills.ParsePURL("pkg:golang/github.com/apache/log4j@2.14")
 entries, err := client.Query(purl)
 
 // 或按生态坐标查询
