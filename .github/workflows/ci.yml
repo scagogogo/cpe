@@ -32,7 +32,7 @@ jobs:
         run: go vet ./...
 
       - name: Run tests (main package)
-        run: go test -count=1 -race -coverprofile=coverage.out .
+        run: go test -count=1 -race -coverprofile=coverage.out ./pkg/cpe/
 
       - name: Run tests (all packages)
         run: go test -count=1 -race ./examples/... ./cmd/... || true
