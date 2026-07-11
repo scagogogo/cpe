@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 // 打印匹配结果

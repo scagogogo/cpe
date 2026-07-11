@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 func main() {

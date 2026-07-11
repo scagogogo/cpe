@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 func main() {

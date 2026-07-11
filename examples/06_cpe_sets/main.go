@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 // CPESet 表示CPE对象的集合

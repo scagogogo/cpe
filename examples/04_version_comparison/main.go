@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 	"github.com/scagogogo/versions"
 )
 
