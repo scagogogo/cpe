@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 // nvd_net_test.go — 通过 nvdHTTPClientOverride 注入 redirectTransport，

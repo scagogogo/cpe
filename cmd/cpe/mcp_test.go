@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 // makeToolReq builds a CallToolRequest with the given JSON arguments.

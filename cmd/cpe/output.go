@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 )
 
 // outputCPE 按指定格式输出单个 CPE 信息

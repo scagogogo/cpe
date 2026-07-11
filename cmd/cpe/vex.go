@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	cpeskills "github.com/scagogogo/cpe-skills"
+	cpeskills "github.com/scagogogo/cpe-skills/pkg/cpe"
 	"github.com/spf13/cobra"
 )
 
